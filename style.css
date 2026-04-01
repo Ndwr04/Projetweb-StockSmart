@@ -1,0 +1,525 @@
+/* 
+============================================================
+   StockSmart - style.css COMPLET
+   Thème : marron clair froid (taupe / beige froid)
+   Objectif :
+   - Harmoniser l'apparence de toutes les pages (index, login, produits, etc.)
+   - Fournir une mise en page type "application" :
+      * header + menu
+      * sections (blocs blancs)
+      * tableaux propres
+      * formulaires centrés
+      * boutons cohérents
+   - Utiliser des variables CSS pour changer facilement le thème
+   
+============================================================ 
+*/
+
+/* ----------------------------
+   1. RESET GLOBAL
+---------------------------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ----------------------------
+   2. VARIABLES GLOBALES : :root
+---------------------------- */
+:root {
+    /* Couleur de fond générale des pages */
+    --bg: #f6f3ef;              /* beige froid, doux */
+
+    /* Couleur de fond des éléments importants (cartes, sections, formulaires) */
+    --surface: #ffffff;         /* blanc */
+
+    /* Couleurs de texte */
+    --text: #2b2624;            /* texte principal brun/noir */
+    --muted: #6c6460;           /* texte secondaire gris brun */
+
+    /* Couleurs principales du thème */
+    --primary: #8a6f63;         /* marron taupe */
+    --primary-dark: #6f564d;    /* variante plus foncée (hover) */
+    --accent: #b9a79f;          /* couleur accent claire si besoin */
+
+    /* Couleur des bordures */
+    --border: #e7dfda;          /* bordure très légère */
+
+    /* Couleurs d'états (feedback) */
+    --danger: #b85b52;          /* rouge doux pour alertes */
+    --danger-dark: #9b4740;     /* rouge foncé pour hover */
+    --success: #4f8a6b;         /* vert succès */
+    --warn: #b07a3a;            /* orange avertissement */
+
+    /* Effets et arrondis */
+    --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);  /* ombre légère */
+    --radius: 12px;                             /* arrondi standard */
+}
+
+/* ----------------------------
+   3. STYLE GÉNÉRAL DU BODY
+---------------------------- */
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.4;
+}
+
+/* ----------------------------
+   4. LIENS <a>
+---------------------------- */
+a {
+    color: var(--primary-dark);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ----------------------------
+   5. HEADER
+---------------------------- */
+header {
+    background: var(--primary);
+    color: #fff;
+    padding: 18px 20px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+/* ----------------------------
+   6. NAVBAR (MENU)
+---------------------------- */
+nav {
+    background: #7b635a;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+nav a {
+    color: #fff;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+nav a:hover {
+    background: rgba(255, 255, 255, 0.14);
+    text-decoration: none;
+}
+
+/* ----------------------------
+   7. CONTAINER PRINCIPAL
+---------------------------- */
+.page-entity {
+    max-width: 1100px;
+    margin: 26px auto;
+    padding: 0 15px;
+}
+
+/* ----------------------------
+   8. TITRES
+---------------------------- */
+h2 {
+    margin: 18px 0 12px;
+    font-size: 22px;
+    color: var(--primary-dark);
+}
+
+.page-entity h3 {
+    margin: 0 0 16px;
+    font-size: 18px;
+    color: var(--primary-dark);
+}
+
+/* ----------------------------
+   9. BLOCS DE CONTENU .section
+---------------------------- */
+.section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin: 14px 0;
+}
+
+/* Bloc formulaire spécial */
+.section-form {
+    padding: 24px;
+}
+
+/* ----------------------------
+   10. LIGNE D'ACTIONS
+---------------------------- */
+.page-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.page-actions .left,
+.page-actions .right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* ----------------------------
+   11. FORMULAIRES PAGES DE GESTION
+---------------------------- */
+.form-entity {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 800;
+    color: var(--primary-dark);
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #d9cfca;
+    margin-bottom: 0;
+    outline: none;
+    background: #fff;
+    color: var(--text);
+    font: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(138, 111, 99, 0.18);
+}
+
+.form-actions {
+    grid-column: 1 / -1;
+    margin-top: 14px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* ----------------------------
+   12. TABLEAUX
+---------------------------- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    margin-top: 10px;
+}
+
+thead {
+    background: #7b635a;
+    color: #fff;
+}
+
+th,
+td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid #efe7e2;
+}
+
+tbody tr:hover {
+    background: #fbf7f5;
+}
+
+/* ----------------------------
+   13. BOUTONS
+---------------------------- */
+button,
+.btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 800;
+    transition: 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+button:hover,
+.btn:hover {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: #9b8f89;
+}
+
+.btn-secondary:hover {
+    background: #7f736d;
+}
+
+.btn-danger {
+    background: var(--danger);
+}
+
+.btn-danger:hover {
+    background: var(--danger-dark);
+}
+
+.btn-sm {
+    padding: 7px 10px;
+    font-size: 13px;
+}
+
+/* ----------------------------
+   14. BADGES
+---------------------------- */
+.badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: #faf7f5;
+    color: var(--muted);
+}
+
+.badge-danger {
+    background: #fbefee;
+    border-color: #f0d3d0;
+    color: var(--danger-dark);
+}
+
+.badge-success {
+    background: #eef7f2;
+    border-color: #cfe8d9;
+    color: #2f6a4d;
+}
+
+.badge-warn {
+    background: #fbf4ea;
+    border-color: #edd9bb;
+    color: #7a5121;
+}
+
+/* ----------------------------
+   15. MESSAGES D'ALERTE
+---------------------------- */
+.msg-success {
+    background: #eef7f2;
+    border: 1px solid #cfe8d9;
+    color: #2f6a4d;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin: 10px 0;
+}
+
+.msg-error {
+    background: #fbefee;
+    border: 1px solid #f0d3d0;
+    color: var(--danger-dark);
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin: 10px 0;
+}
+.alert {
+    background: #fff5f4;
+}
+/* ----------------------------
+   16. DASHBOARD CARDS (Accueil)
+---------------------------- */
+.resume-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.resume-row {
+    display: flex;
+    gap: 16px;
+}
+
+.resume-row .card {
+    flex: 1;
+    padding: 14px 16px;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+}
+
+.card h3 {
+    font-size: 15px;
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-weight: 800;
+}
+
+.card p {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--primary-dark);
+}
+
+.alert {
+    color: var(--danger);
+}
+
+/* ----------------------------
+   17. FOOTER
+---------------------------- */
+footer {
+    text-align: center;
+    padding: 12px;
+    margin-top: 25px;
+    background: var(--primary);
+    color: #fff;
+}
+
+/* ----------------------------
+   18. RESPONSIVE
+---------------------------- */
+@media (max-width: 768px) {
+    .page-entity {
+        margin: 18px auto;
+        padding: 0 10px;
+    }
+
+    .form-entity {
+        grid-template-columns: 1fr;
+    }
+
+    .section,
+    .section-form {
+        padding: 16px;
+    }
+
+    nav {
+        justify-content: center;
+        padding: 8px;
+    }
+
+    nav a {
+        padding: 6px 10px;
+        font-size: 14px;
+    }
+
+    table {
+        font-size: 14px;
+    }
+
+    th,
+    td {
+        padding: 8px 6px;
+    }
+
+}
+/* ----------------------------
+   19. PRODUITS : IMAGES
+---------------------------- */
+.img-produit {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    display: block;
+    margin: 0 auto;
+}
+
+.preview-image {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.preview-image p {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.preview-image img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #d9cfca;
+    background: #f5f5f5;
+}
+
+/* champ fichier */
+.form-group input[type="file"] {
+    padding: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.form-group small {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+/* cellule image dans le tableau */
+td .img-produit {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* colonnes plus lisibles pour produits */
+table th:nth-child(1),
+table td:nth-child(1) {
+    width: 90px;
+}
+
+table th:nth-child(2),
+table td:nth-child(2) {
+    min-width: 110px;
+}
+
+table th:nth-child(3),
+table td:nth-child(3) {
+    min-width: 180px;
+}
