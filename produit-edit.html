@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Modifier un Produit - StockSmart</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+
+<header>
+  <h1>StockSmart</h1>
+</header>
+
+<nav>
+  <a href="../index.php">Accueil</a>
+  <a href="produits.html">Produits</a>
+  <a href="categories.html">Catégories</a>
+  <a href="mouvements.html">Mouvements</a>
+  <a href="login.html">Connexion</a>
+</nav>
+
+<div class="container">
+  <h2>Modifier un produit</h2>
+
+  <div class="form-wrap">
+    <form>
+      <!-- Ces champs seront remplis automatiquement via la BDD plus tard -->
+
+      <label for="ref">Référence :</label>
+      <input id="ref" type="text" placeholder="Référence du produit" required>
+
+      <label for="nom">Nom du produit :</label>
+      <input id="nom" type="text" placeholder="Nom du produit" required>
+
+      <label for="categorie">Catégorie :</label>
+      <select id="categorie" required>
+        <option value="">Sélectionner une catégorie</option>
+        <option>Boissons</option>
+        <option>Snacks</option>
+        <option>Autre</option>
+      </select>
+
+      <label for="quantite">Quantité :</label>
+      <input id="quantite" type="number" min="0" required>
+
+      <label for="seuil">Seuil d'alerte :</label>
+      <input id="seuil" type="number" min="0">
+
+      <label for="prix">Prix (€) :</label>
+      <input id="prix" type="number" step="0.01" min="0">
+
+      <button type="submit" class="btn">Enregistrer les modifications</button>
+      <a href="produits.html" class="btn btn-secondary">Annuler</a>
+    </form>
+  </div>
+</div>
+
+<footer>
+  © 2026 StockSmart - Projet TD Web
+</footer>
+
+</body>
+</html>
