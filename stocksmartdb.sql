@@ -1,575 +1,319 @@
--- Création des tables pour le TD0
--- REPONSES AUX QUESTIONS à la ligne 392
-DROP DATABASE IF EXISTS techshop;
-CREATE DATABASE IF NOT EXISTS techshop;
-USE techshop;
+CREATE DATABASE IF NOT EXISTS stocksmartdb
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_general_ci;
 
--- Table des clients
-CREATE TABLE customers (
-    customer_id INT PRIMARY KEY AUTO_INCREMENT,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    address VARCHAR(200),
-    loyalty_level ENUM('New', 'Bronze', 'Silver', 'Gold') DEFAULT 'New',
-    date_created DATETIME DEFAULT CURRENT_TIMESTAMP,
-    date_modified DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    last_visit DATETIME,
-    active BOOLEAN DEFAULT TRUE
-);
+USE stocksmartdb;
 
--- Table des fournisseurs
-CREATE TABLE suppliers (
-    supplier_id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100),
-    phone VARCHAR(20)
-);
+SET FOREIGN_KEY_CHECKS = 0;
 
--- Table des produits
-CREATE TABLE products (
-    product_id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
+DROP TABLE IF EXISTS mouvements;
+DROP TABLE IF EXISTS produits;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS utilisateurs;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================
+-- TABLE UTILISATEURS
+-- ============================
+CREATE TABLE utilisateurs (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    prenom VARCHAR(100) DEFAULT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    mot_de_passe VARCHAR(255) DEFAULT NULL,
+    password VARCHAR(255) DEFAULT NULL,
+    role ENUM(
+        'admin',
+        'gerant',
+        'chef_rayon',
+        'magasinier',
+        'caissier',
+        'employe',
+        'lecture',
+        'consultant'
+    ) NOT NULL DEFAULT 'employe',
+    actif TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_role (role),
+    INDEX idx_actif (actif)
+) ENGINE=InnoDB;
+
+-- ============================
+-- TABLE CATEGORIES
+-- ============================
+CREATE TABLE categories (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL UNIQUE,
+    emoji VARCHAR(10) DEFAULT '📦',
+    couleur VARCHAR(7) DEFAULT '#3b82f6',
     description TEXT,
-    price DECIMAL(10,2) NOT NULL,
-    stock INT DEFAULT 0,
-    category VARCHAR(50),
-    supplier_id INT,
-    status VARCHAR(20) DEFAULT 'Active',
-    last_sale_date DATETIME,
-    date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
-);
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
--- Table du catalogue produits
-CREATE TABLE product_catalog (
-    catalog_id INT PRIMARY KEY AUTO_INCREMENT,
-    product_id INT,
-    featured BOOLEAN DEFAULT FALSE,
-    display_order INT,
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
+-- ============================
+-- TABLE PRODUITS
+-- ============================
+CREATE TABLE produits (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    reference VARCHAR(50) NOT NULL UNIQUE,
+    nom VARCHAR(200) NOT NULL,
+    categorie_id INT UNSIGNED NOT NULL,
+    fournisseur VARCHAR(150) DEFAULT NULL,
+    prix DECIMAL(10,2) DEFAULT 0.00,
+    prix_unitaire DECIMAL(10,2) DEFAULT 0.00,
+    unite ENUM('unité','kg','L','pack','carton') DEFAULT 'unité',
+    quantite INT NOT NULL DEFAULT 0,
+    stock INT NOT NULL DEFAULT 0,
+    seuil_alerte INT NOT NULL DEFAULT 10,
+    image VARCHAR(255) NOT NULL DEFAULT 'images/produits/no-image.jpg',
+    image_url VARCHAR(255) DEFAULT NULL,
+    image_emoji VARCHAR(10) DEFAULT '📦',
+    description TEXT,
+    actif TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (categorie_id) REFERENCES categories(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+    INDEX idx_categorie (categorie_id),
+    INDEX idx_stock (stock),
+    INDEX idx_quantite (quantite),
+    INDEX idx_seuil (seuil_alerte),
+    INDEX idx_actif (actif)
+) ENGINE=InnoDB;
 
--- Table des commandes
-CREATE TABLE orders (
-    order_id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT,
-    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(20) DEFAULT 'Pending',
-    total_amount DECIMAL(10,2),
-    delivery_address VARCHAR(200),
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-);
+-- ============================
+-- TABLE MOUVEMENTS
+-- ============================
+CREATE TABLE mouvements (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    produit_id INT UNSIGNED NOT NULL,
+    utilisateur_id INT UNSIGNED DEFAULT NULL,
+    user_id INT UNSIGNED DEFAULT NULL,
+    type_mouvement ENUM('entree','vente','perte','casse','sortie') NOT NULL,
+    type ENUM('entree','sortie') DEFAULT NULL,
+    quantite INT NOT NULL,
+    stock_avant INT DEFAULT NULL,
+    stock_apres INT DEFAULT NULL,
+    motif ENUM(
+        'approvisionnement',
+        'vente',
+        'perte_peremption',
+        'casse',
+        'retour_fournisseur',
+        'inventaire_regularisation',
+        'transfert',
+        'perte'
+    ) DEFAULT 'approvisionnement',
+    reference_doc VARCHAR(100) DEFAULT NULL,
+    date_mouvement DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    commentaire TEXT,
+    FOREIGN KEY (produit_id) REFERENCES produits(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES utilisateurs(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+    INDEX idx_produit (produit_id),
+    INDEX idx_user (utilisateur_id),
+    INDEX idx_user2 (user_id),
+    INDEX idx_type (type_mouvement),
+    INDEX idx_date (date_mouvement)
+) ENGINE=InnoDB;
 
--- Table des éléments de commande
-CREATE TABLE order_items (
-    order_id INT,
-    product_id INT,
-    quantity INT NOT NULL,
-    price_at_time DECIMAL(10,2) NOT NULL,
-    PRIMARY KEY (order_id, product_id),
-    FOREIGN KEY (order_id) REFERENCES orders(order_id),
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
+-- ============================
+-- TRIGGER STOCK AUTO
+-- ============================
+DELIMITER $$
 
--- Table des avis produits
-CREATE TABLE product_reviews (
-    review_id INT PRIMARY KEY AUTO_INCREMENT,
-    product_id INT,
-    customer_id INT,
-    rating INT CHECK (rating BETWEEN 1 AND 5),
-    comment TEXT,
-    review_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(product_id),
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-);
+CREATE TRIGGER after_mouvement_insert
+AFTER INSERT ON mouvements
+FOR EACH ROW
+BEGIN
+    IF NEW.type_mouvement = 'entree' THEN
+        UPDATE produits
+        SET stock = stock + NEW.quantite,
+            quantite = quantite + NEW.quantite
+        WHERE id = NEW.produit_id;
+    ELSE
+        UPDATE produits
+        SET stock = stock - NEW.quantite,
+            quantite = quantite - NEW.quantite
+        WHERE id = NEW.produit_id;
+    END IF;
+END$$
 
--- Table des adresses de livraison
-CREATE TABLE delivery_addresses (
-    address_id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT,
-    address VARCHAR(200) NOT NULL,
-    is_default BOOLEAN DEFAULT FALSE,
-    date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-);
+DELIMITER ;
 
--- Table de l'historique des prix
-CREATE TABLE price_history (
-    history_id INT PRIMARY KEY AUTO_INCREMENT,
-    product_id INT,
-    price DECIMAL(10,2) NOT NULL,
-    change_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
+-- ============================
+-- UTILISATEURS
+-- ============================
+INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, password, role, actif) VALUES
+('Pretty', 'Rokia', 'rose@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 1),
+('Dupont', 'Marie', 'marie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'gerant', 1),
+('Dupont', 'Julie', 'julie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'chef_rayon', 1),
+('Stock', 'Karim', 'karim@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'magasinier', 1),
+('Caisse', 'Sophie', 'sophie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'caissier', 1);
 
--- Table des listes de souhaits
-CREATE TABLE wishlist_items (
-    wishlist_id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT,
-    product_id INT,
-    date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
+-- ============================
+-- CATEGORIES
+-- ============================
+INSERT INTO categories (id, nom, emoji, couleur, description) VALUES
+(1, 'Fruits et légumes', '🥦', '#10b981', 'Produits frais de fruits et légumes'),
+(2, 'Boucherie / volaille', '🥩', '#ef4444', 'Viandes rouges, blanches et volailles'),
+(3, 'Charcuterie / traiteur', '🍖', '#f59e0b', 'Produits de charcuterie et traiteur'),
+(4, 'Poissonnerie', '🐟', '#3b82f6', 'Poissons, crustacés et fruits de mer'),
+(5, 'Crèmerie / produits laitiers', '🥛', '#8b5cf6', 'Lait, yaourts, fromages et crèmes'),
+(6, 'Épicerie salée', '🧂', '#f97316', 'Pâtes, riz, conserves, sauces salées'),
+(7, 'Épicerie sucrée', '🍫', '#ec4899', 'Biscuits, confiseries, chocolat'),
+(8, 'Petit-déjeuner', '☕', '#a16207', 'Café, thé, céréales, boissons chaudes'),
+(9, 'Boissons', '🥤', '#0ea5e9', 'Eaux, sodas, jus et boissons diverses'),
+(10, 'Surgelés', '🧊', '#06b6d4', 'Produits congelés et surgelés'),
+(11, 'Hygiène / beauté', '🧴', '#d946ef', 'Soins, hygiène corporelle et beauté'),
+(12, 'Entretien maison', '🧹', '#64748b', 'Produits ménagers et entretien'),
+(13, 'Bébé', '👶', '#f472b6', 'Produits destinés aux bébés'),
+(14, 'Animalerie', '🐾', '#84cc16', 'Alimentation et soins pour animaux'),
+(15, 'Bazar / maison', '🏠', '#78716c', 'Articles divers pour la maison'),
+(16, 'Textile', '👕', '#6366f1', 'Vêtements et linge'),
+(17, 'Électroménager / multimédia', '📱', '#334155', 'Appareils électriques et multimédia'),
+(18, 'Papeterie / librairie', '📚', '#b45309', 'Fournitures scolaires et livres');
 
--- Table du panier
-CREATE TABLE cart_items (
-    cart_id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT,
-    product_id INT,
-    quantity INT DEFAULT 1,
-    date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
-
--- Table des factures
-CREATE TABLE invoices (
-    invoice_id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT,
-    customer_email VARCHAR(100),
-    amount DECIMAL(10,2),
-    date_created DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id)
-);
-
--- Table des tickets support
-CREATE TABLE support_tickets (
-    ticket_id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT,
-    customer_email VARCHAR(100),
-    subject VARCHAR(200),
-    status VARCHAR(20) DEFAULT 'Open',
-    date_created DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-);
-
--- Table d'audit
-CREATE TABLE audit_log (
-    log_id INT PRIMARY KEY AUTO_INCREMENT,
-    table_name VARCHAR(50),
-    record_id INT,
-    action VARCHAR(20),
-    old_value TEXT,
-    new_value TEXT,
-    change_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    changed_by VARCHAR(50)
-);
-
-
--- Insert data into customers table
-INSERT INTO customers (email, name, address, loyalty_level, last_visit, active)
+-- ============================
+-- INSERT PRODUITS
+-- ============================
+INSERT INTO produits
+(id, reference, nom, categorie_id, fournisseur, prix, prix_unitaire, unite, quantite, stock, seuil_alerte, image, image_url, image_emoji, description, actif)
 VALUES
-('john.doe@example.com', 'John Doe', '123 Elm Street, Cityville', 'Silver', '2023-09-15 12:45:00', TRUE),
-('jane.smith@example.com', 'Jane Smith', '456 Oak Avenue, Townsville', 'Gold', '2023-10-01 14:10:00', TRUE),
-('mike.jones@example.com', 'Mike Jones', '789 Pine Road, Villageton', 'Bronze', '2023-08-22 09:00:00', FALSE),
-('lisa.brown@example.com', 'Lisa Brown', '321 Maple Drive, Lakeview', 'New', '2023-07-19 16:25:00', TRUE),
-('paul.green@example.com', 'Paul Green', '654 Cedar Avenue, Hometown', 'Silver', '2023-06-25 11:40:00', TRUE),
-('amy.white@example.com', 'Amy White', '987 Birch Blvd, Hilltown', 'Bronze', '2023-05-13 17:55:00', TRUE),
-('mark.davis@example.com', 'Mark Davis', '456 Spruce Street, Valley City', 'Gold', '2023-04-20 18:05:00', FALSE),
-('sara.wilson@example.com', 'Sara Wilson', '321 Aspen Way, Riverside', 'New', '2023-09-10 15:00:00', TRUE),
-('tom.harris@example.com', 'Tom Harris', '789 Willow Lane, Greenfield', 'Silver', '2023-10-11 13:30:00', TRUE),
-('linda.thomas@example.com', 'Linda Thomas', '456 Fir Avenue, Beachtown', 'Gold', '2023-10-15 12:10:00', TRUE),
-('linda.x@example.com', 'Linda X', '456 Fir Avenue, X', 'Gold', NULL, TRUE);
+(1, 'F001', 'Pommes Golden 1kg', 1, 'Ferme Dupont', 2.99, 2.99, 'kg', 18, 18, 6, 'images/produits/pommes-golden.jpg', NULL, '🍎', 'Pommes golden fraîches', 1),
+(2, 'F002', 'Bananes 1kg', 1, 'Banana Corp', 1.79, 1.79, 'kg', 25, 25, 8, 'images/produits/bananes.jpg', NULL, '🍌', 'Bananes mûres', 1),
+(3, 'F003', 'Carottes 1kg', 1, 'Ferme Bio', 1.20, 1.20, 'kg', 30, 30, 10, 'images/produits/carottes.jpg', NULL, '🥕', 'Carottes fraîches', 1),
+(4, 'F004', 'Salade verte', 1, 'Maraîcher Local', 1.50, 1.50, 'unité', 15, 15, 5, 'images/produits/salade.jpg', NULL, '🥬', 'Salade verte fraîche', 1),
+(5, 'F005', 'Tomates 500g', 1, 'Maraîcher Local', 2.20, 2.20, 'kg', 12, 12, 4, 'images/produits/tomates.jpg', NULL, '🍅', 'Tomates juteuses', 1),
+(6, 'F006', 'Pommes de terre 2kg', 1, 'Ferme Dupont', 2.49, 2.49, 'kg', 40, 40, 15, 'images/produits/pommes-terre.jpg', NULL, '🥔', 'Pommes de terre sachet 2kg', 1),
+(7, 'F007', 'Courgettes 1kg', 1, 'Ferme Bio', 2.10, 2.10, 'kg', 8, 8, 3, 'images/produits/courgettes.jpg', NULL, '🥒', 'Courgettes fraîches', 1),
+(8, 'F008', 'Oignons 1kg', 1, 'Ferme Dupont', 1.80, 1.80, 'kg', 22, 22, 7, 'images/produits/oignons.jpg', NULL, '🧅', 'Oignons jaunes', 1),
+(9, 'F009', 'Ail 250g', 1, 'Ferme Bio', 1.90, 1.90, 'kg', 35, 35, 12, 'images/produits/ail.jpg', NULL, '🧄', 'Ail frais', 1),
+(10, 'F010', 'Citrons 1kg', 1, 'Agrumes Sud', 3.20, 3.20, 'kg', 14, 14, 5, 'images/produits/citrons.jpg', NULL, '🍋', 'Citrons jaunes', 1),
 
--- Insert data into suppliers table
-INSERT INTO suppliers (name, email, phone)
+(11, 'V001', 'Escalopes poulet 1kg', 2, 'Boucherie Martin', 7.50, 7.50, 'kg', 10, 10, 4, 'images/produits/escalopes-poulet.jpg', NULL, '🍗', 'Escalopes de poulet fraîches', 1),
+(12, 'V002', 'Steak haché 20%', 2, 'Maison Bouvet', 6.90, 6.90, 'kg', 8, 8, 3, 'images/produits/steak-hache.jpg', NULL, '🥩', 'Steak haché 20%', 1),
+(13, 'V003', 'Cuisses poulet', 2, 'Volaille Express', 5.80, 5.80, 'kg', 15, 15, 6, 'images/produits/cuisses-poulet.jpg', NULL, '🍗', 'Cuisses de poulet', 1),
+(14, 'V004', 'Côtelettes porc', 2, 'Boucherie Martin', 8.20, 8.20, 'kg', 12, 12, 5, 'images/produits/cottelettes-porc.jpg', NULL, '🥓', 'Côtelettes de porc', 1),
+(15, 'V005', 'Merguez 500g', 2, 'Maison Bouvet', 4.50, 4.50, 'pack', 20, 20, 8, 'images/produits/merguez.jpg', NULL, '🌭', 'Merguez 500g', 1),
+(16, 'V006', 'Aiguillettes poulet', 2, 'Volaille Express', 7.90, 7.90, 'kg', 6, 6, 2, 'images/produits/aiguillettes.jpg', NULL, '🍗', 'Aiguillettes de poulet', 1),
+(17, 'V007', 'Filet mignon porc', 2, 'Boucherie Martin', 12.50, 12.50, 'kg', 5, 5, 2, 'images/produits/filet-mignon.jpg', NULL, '🥩', 'Filet mignon de porc', 1),
+(18, 'V008', 'Surlonge bœuf', 2, 'Maison Bouvet', 15.90, 15.90, 'kg', 4, 4, 2, 'images/produits/surlonge-boeuf.jpg', NULL, '🥩', 'Surlonge de bœuf', 1),
+(19, 'V009', 'Foie poulet 500g', 2, 'Volaille Express', 3.80, 3.80, 'pack', 18, 18, 7, 'images/produits/foie-poulet.jpg', NULL, '🍗', 'Foie de poulet', 1),
+(20, 'V010', 'Haut de cuisse dinde', 2, 'Boucherie Martin', 9.20, 9.20, 'kg', 9, 9, 4, 'images/produits/cuisse-dinde.jpg', NULL, '🍗', 'Haut de cuisse de dinde', 1),
+
+(21, 'C001', 'Jambon blanc 200g', 3, 'Charcuterie Du Coin', 2.80, 2.80, 'pack', 25, 25, 10, 'images/produits/jambon-blanc.jpg', NULL, '🥓', 'Jambon blanc tranché', 1),
+(22, 'C002', 'Rillettes porc 180g', 3, 'Maison Cendré', 3.20, 3.20, 'pack', 16, 16, 6, 'images/produits/rillettes.jpg', NULL, '🥓', 'Rillettes de porc', 1),
+(23, 'C003', 'Pâté maison 200g', 3, 'Maison Cendré', 4.10, 4.10, 'pack', 14, 14, 5, 'images/produits/pate-maison.jpg', NULL, '🥓', 'Pâté de campagne', 1),
+(24, 'C004', 'Saucisson sec 200g', 3, 'Charcuterie Du Coin', 5.90, 5.90, 'pack', 22, 22, 8, 'images/produits/saucisson-sec.jpg', NULL, '🥓', 'Saucisson sec', 1),
+(25, 'C005', 'Fromage de tête', 3, 'Maison Cendré', 4.50, 4.50, 'pack', 12, 12, 4, 'images/produits/fromage-tete.jpg', NULL, '🥓', 'Fromage de tête', 1),
+(26, 'C006', 'Chorizo 200g', 3, 'Charcuterie Du Coin', 6.20, 6.20, 'pack', 18, 18, 7, 'images/produits/chorizo.jpg', NULL, '🌶️', 'Chorizo doux', 1),
+(27, 'C007', 'Jambon cru 100g', 3, 'Maison Cendré', 7.80, 7.80, 'pack', 10, 10, 3, 'images/produits/jambon-cru.jpg', NULL, '🥓', 'Jambon cru affiné', 1),
+(28, 'C008', 'Terrine campagne', 3, 'Charcuterie Du Coin', 5.60, 5.60, 'pack', 11, 11, 4, 'images/produits/terrine.jpg', NULL, '🥓', 'Terrine de campagne', 1),
+(29, 'C009', 'Knacki 10x40g', 3, 'Herta', 3.90, 3.90, 'pack', 30, 30, 12, 'images/produits/knacki.jpg', NULL, '🌭', 'Saucisses knacki', 1),
+(30, 'C010', 'Salami 150g', 3, 'Charcuterie Du Coin', 6.80, 6.80, 'pack', 15, 15, 6, 'images/produits/salami.jpg', NULL, '🥓', 'Salami tranché', 1),
+
+(31, 'P001', 'Filets cabillaud 400g', 4, 'Poisson Frais SA', 9.90, 9.90, 'pack', 8, 8, 3, 'images/produits/cabillaud.jpg', NULL, '🐟', 'Filets de cabillaud', 1),
+(32, 'P002', 'Crevettes roses 200g', 4, 'Marée Atlantique', 7.50, 7.50, 'pack', 12, 12, 4, 'images/produits/crevettes.jpg', NULL, '🦐', 'Crevettes roses', 1),
+(33, 'P003', 'Saumon fumé 100g', 4, 'Marée Atlantique', 6.80, 6.80, 'pack', 20, 20, 8, 'images/produits/saumon-fume.jpg', NULL, '🐟', 'Saumon fumé', 1),
+(34, 'P004', 'Filets maquereau', 4, 'Poisson Frais SA', 4.20, 4.20, 'pack', 10, 10, 4, 'images/produits/maquereau.jpg', NULL, '🐟', 'Filets de maquereau', 1),
+(35, 'P005', 'Moules décortiquées', 4, 'Marée Atlantique', 5.90, 5.90, 'pack', 6, 6, 2, 'images/produits/moules.jpg', NULL, '🦪', 'Moules décortiquées', 1),
+(36, 'P006', 'Thon au naturel', 4, 'Conserverie Océane', 1.80, 1.80, 'unité', 25, 25, 10, 'images/produits/thon-naturel.jpg', NULL, '🐟', 'Thon au naturel', 1),
+(37, 'P007', 'Sardines en boîte', 4, 'Conserverie Océane', 1.20, 1.20, 'unité', 35, 35, 15, 'images/produits/sardines.jpg', NULL, '🐟', 'Sardines à l’huile', 1),
+(38, 'P008', 'Surimi bâtonnets', 4, 'Frais & Co', 2.99, 2.99, 'pack', 18, 18, 7, 'images/produits/surimi.jpg', NULL, '🦀', 'Bâtonnets de surimi', 1),
+(39, 'P009', 'Anchois marinade', 4, 'Conserverie Océane', 3.50, 3.50, 'pack', 14, 14, 5, 'images/produits/anchois.jpg', NULL, '🐟', 'Anchois marinés', 1),
+(40, 'P010', 'Calmars anneaux', 4, 'Poisson Frais SA', 8.90, 8.90, 'pack', 9, 9, 3, 'images/produits/calmars.jpg', NULL, '🦑', 'Anneaux de calmars', 1),
+
+(41, 'L001', 'Yaourt nature 4x125g', 5, 'Danone', 0.90, 0.90, 'pack', 12, 12, 4, 'images/produits/yaourt-nature.jpg', NULL, '🥛', 'Yaourts nature', 1),
+(42, 'L002', 'Beurre demi-sel 250g', 5, 'Lactalis', 2.40, 2.40, 'pack', 20, 20, 8, 'images/produits/beurre.jpg', NULL, '🧈', 'Beurre demi-sel', 1),
+(43, 'L003', 'Fromage emmental 300g', 5, 'Fromagerie Centrale', 4.80, 4.80, 'pack', 15, 15, 6, 'images/produits/emmental.jpg', NULL, '🧀', 'Emmental râpé', 1),
+(44, 'L004', 'Camembert 250g', 5, 'Fromagerie Centrale', 3.90, 3.90, 'unité', 10, 10, 4, 'images/produits/camembert.jpg', NULL, '🧀', 'Camembert fermier', 1),
+(45, 'L005', 'Crème fraîche 20%', 5, 'Lactalis', 1.60, 1.60, 'unité', 18, 18, 7, 'images/produits/creme-fraiche.jpg', NULL, '🥛', 'Crème fraîche', 1),
+(46, 'L006', 'Lait entier 1L', 5, 'Danone', 1.20, 1.20, 'unité', 30, 30, 12, 'images/produits/lait-entier.jpg', NULL, '🥛', 'Lait entier', 1),
+(47, 'L007', 'Fromage frais 150g', 5, 'Fromagerie Centrale', 1.99, 1.99, 'pack', 22, 22, 9, 'images/produits/fromage-frais.jpg', NULL, '🧀', 'Fromage frais', 1),
+(48, 'L008', 'Œufs moyens x12', 5, 'Ferme du Nid', 3.20, 3.20, 'pack', 25, 25, 10, 'images/produits/oeufs.jpg', NULL, '🥚', 'Œufs moyens', 1),
+(49, 'L009', 'Roquefort 200g', 5, 'Fromagerie Centrale', 6.50, 6.50, 'pack', 8, 8, 3, 'images/produits/roquefort.jpg', NULL, '🧀', 'Roquefort AOP', 1),
+(50, 'L010', 'Petits suisses 4x60g', 5, 'Danone', 2.10, 2.10, 'pack', 16, 16, 6, 'images/produits/petits-suisses.jpg', NULL, '🥛', 'Petits suisses nature', 1),
+
+(51, 'B001', 'Jus orange 1L', 9, 'Tropicana', 2.50, 2.50, 'unité', 5, 5, 5, 'images/produits/jus-orange.jpg', NULL, '🍊', 'Jus d’orange', 1),
+(52, 'B002', 'Eau minérale 1.5L', 9, 'Evian', 1.00, 1.00, 'unité', 20, 20, 5, 'images/produits/eau-minerale.jpg', NULL, '💧', 'Eau minérale', 1),
+(53, 'B003', 'Coca Cola 33cl', 9, 'Coca-Cola', 1.20, 1.20, 'unité', 25, 25, 10, 'images/produits/coca-cola.jpg', NULL, '🥤', 'Boisson gazeuse', 1),
+(54, 'B004', 'Eau pétillante 1L', 9, 'Perrier', 1.40, 1.40, 'unité', 15, 15, 6, 'images/produits/eau-petillante.jpg', NULL, '💦', 'Eau pétillante', 1),
+(55, 'B005', 'Jus multifruit 1L', 9, 'Tropicana', 2.80, 2.80, 'unité', 8, 8, 3, 'images/produits/jus-multifruit.jpg', NULL, '🍹', 'Jus multifruit', 1),
+(56, 'B006', 'Thé glacé 1.5L', 9, 'Lipton', 2.10, 2.10, 'unité', 12, 12, 4, 'images/produits/the-glace.jpg', NULL, '🫖', 'Thé glacé', 1),
+(57, 'B007', 'Sprite 33cl', 9, 'Sprite', 1.30, 1.30, 'unité', 18, 18, 7, 'images/produits/sprite.jpg', NULL, '🥤', 'Soda citron-lime', 1),
+(58, 'B008', 'Bière blonde 33cl x6', 9, 'Heineken', 7.90, 7.90, 'pack', 10, 10, 4, 'images/produits/biere-blonde.jpg', NULL, '🍺', 'Pack bière blonde', 1),
+(59, 'B009', 'Sirop menthe 1L', 9, 'Teisseire', 4.50, 4.50, 'unité', 14, 14, 5, 'images/produits/sirop-menthe.jpg', NULL, '🌿', 'Sirop de menthe', 1),
+(60, 'B010', 'Limonade 1L', 9, 'Lorina', 2.20, 2.20, 'unité', 11, 11, 4, 'images/produits/limonade.jpg', NULL, '🥤', 'Limonade artisanale', 1),
+
+(61, 'H001', 'Savon liquide 500ml', 11, 'Dove', 3.20, 3.20, 'unité', 8, 8, 3, 'images/produits/savon-liquide.jpg', NULL, '🧼', 'Savon liquide main', 1),
+(62, 'H002', 'Shampoing 400ml', 11, 'L’Oréal', 4.90, 4.90, 'unité', 12, 12, 4, 'images/produits/shampoing.jpg', NULL, '🧴', 'Shampoing doux', 1),
+(63, 'H003', 'Dentifrice 100ml', 11, 'Colgate', 2.80, 2.80, 'unité', 25, 25, 10, 'images/produits/dentifrice.jpg', NULL, '🦷', 'Dentifrice', 1),
+(64, 'H004', 'Déodorant spray', 11, 'Nivea', 3.50, 3.50, 'unité', 18, 18, 7, 'images/produits/deodorant.jpg', NULL, '🌸', 'Déodorant spray', 1),
+(65, 'H005', 'Gel douche 250ml', 11, 'Dove', 2.99, 2.99, 'unité', 15, 15, 6, 'images/produits/gel-douche.jpg', NULL, '🛁', 'Gel douche', 1),
+(66, 'H006', 'Crème hydratante', 11, 'Nivea', 6.80, 6.80, 'unité', 10, 10, 4, 'images/produits/creme-hydratante.jpg', NULL, '🧴', 'Crème hydratante', 1),
+(67, 'H007', 'Rasoir 5 lames', 11, 'Gillette', 8.90, 8.90, 'pack', 22, 22, 9, 'images/produits/rasoir.jpg', NULL, '🪒', 'Rasoir 5 lames', 1),
+(68, 'H008', 'Papier toilette x12', 11, 'Lotus', 7.50, 7.50, 'pack', 30, 30, 12, 'images/produits/papier-toilette.jpg', NULL, '🧻', 'Papier toilette', 1),
+(69, 'H009', 'Serviettes hygiéniques', 11, 'Always', 3.20, 3.20, 'pack', 16, 16, 6, 'images/produits/serviettes.jpg', NULL, '🩷', 'Serviettes hygiéniques', 1),
+(70, 'H010', 'Aftershave 100ml', 11, 'Nivea Men', 5.90, 5.90, 'unité', 14, 14, 5, 'images/produits/aftershave.jpg', NULL, '🪞', 'Aftershave', 1),
+
+(71, 'E001', 'Liquide vaisselle 1L', 12, 'Paic', 2.49, 2.49, 'unité', 20, 20, 8, 'images/produits/liquide-vaisselle.jpg', NULL, '🧽', 'Liquide vaisselle', 1),
+(72, 'E002', 'Lessive liquide 2L', 12, 'Ariel', 6.90, 6.90, 'unité', 12, 12, 4, 'images/produits/lessive-liquide.jpg', NULL, '🧺', 'Lessive liquide', 1),
+(73, 'E003', 'Produits multi-surfaces', 12, 'Mr Propre', 3.80, 3.80, 'unité', 15, 15, 6, 'images/produits/multi-surfaces.jpg', NULL, '🧴', 'Nettoyant multi-surfaces', 1),
+(74, 'E004', 'Eau de javel 1L', 12, 'Ajax', 1.99, 1.99, 'unité', 18, 18, 7, 'images/produits/eau-javel.jpg', NULL, '🧪', 'Eau de javel', 1),
+(75, 'E005', 'Sac poubelle 50L x50', 12, 'Spontex', 9.50, 9.50, 'pack', 25, 25, 10, 'images/produits/sac-poubelle.jpg', NULL, '🗑️', 'Sacs poubelle', 1),
+(76, 'E006', 'Destructeur graisse', 12, 'Cillit Bang', 4.20, 4.20, 'unité', 10, 10, 4, 'images/produits/destructeur-graisse.jpg', NULL, '🧼', 'Décrassant graisse', 1),
+(77, 'E007', 'Eponges x4', 12, 'Scotch-Brite', 2.10, 2.10, 'pack', 30, 30, 12, 'images/produits/eponges.jpg', NULL, '🧽', 'Éponges ménage', 1),
+(78, 'E008', 'Produits vitres 750ml', 12, 'Ajax', 2.80, 2.80, 'unité', 16, 16, 6, 'images/produits/vitres.jpg', NULL, '🪟', 'Nettoyant vitres', 1),
+(79, 'E009', 'Gants caoutchouc', 12, 'Spontex', 1.80, 1.80, 'unité', 22, 22, 9, 'images/produits/gants-caoutchouc.jpg', NULL, '🧤', 'Gants ménagers', 1),
+(80, 'E010', 'Chiffons microfibres x5', 12, 'Vileda', 4.90, 4.90, 'pack', 28, 28, 11, 'images/produits/chiffons.jpg', NULL, '🧻', 'Chiffons microfibres', 1),
+
+(81, 'BB001', 'Couches taille 2 x40', 13, 'Pampers', 12.90, 12.90, 'pack', 8, 8, 3, 'images/produits/couches-t2.jpg', NULL, '👶', 'Couches bébé taille 2', 1),
+(82, 'BB002', 'Lait 1er âge 400g', 13, 'Gallia', 15.50, 15.50, 'pack', 12, 12, 4, 'images/produits/lait-bebe.jpg', NULL, '🍼', 'Lait infantile', 1),
+(83, 'BB003', 'Lingettes x80', 13, 'Pampers', 3.99, 3.99, 'pack', 15, 15, 6, 'images/produits/lingettes.jpg', NULL, '🧻', 'Lingettes bébé', 1),
+(84, 'BB004', 'Compote pomme x4', 13, 'Good Gout', 2.20, 2.20, 'pack', 20, 20, 8, 'images/produits/compote-pomme.jpg', NULL, '🍏', 'Compotes pour bébé', 1),
+(85, 'BB005', 'Biberon 260ml', 13, 'Avent', 7.80, 7.80, 'unité', 10, 10, 4, 'images/produits/biberon.jpg', NULL, '🍼', 'Biberon 260ml', 1),
+(86, 'BB006', 'Eau bébé 1L', 13, 'Evian', 1.60, 1.60, 'unité', 18, 18, 7, 'images/produits/eau-bebe.jpg', NULL, '💧', 'Eau pour bébé', 1),
+(87, 'BB007', 'Couches taille 1 x40', 13, 'Pampers', 12.90, 12.90, 'pack', 9, 9, 3, 'images/produits/couches-t1.jpg', NULL, '👶', 'Couches bébé taille 1', 1),
+(88, 'BB008', 'Tetine silicone', 13, 'Avent', 4.50, 4.50, 'unité', 25, 25, 10, 'images/produits/tetine.jpg', NULL, '🍼', 'Tétine silicone', 1),
+(89, 'BB009', 'Linge bébé x3', 13, 'Petit Bateau', 8.90, 8.90, 'pack', 14, 14, 5, 'images/produits/linge-bebe.jpg', NULL, '👕', 'Linge bébé', 1),
+(90, 'BB010', 'Doudou ours', 13, 'Kaloo', 9.99, 9.99, 'unité', 16, 16, 6, 'images/produits/doudou.jpg', NULL, '🧸', 'Doudou ourson', 1),
+
+(91, 'P001', 'Cahier 96p', 18, 'Oxford', 1.20, 1.20, 'unité', 50, 50, 20, 'images/produits/cahier-96p.jpg', NULL, '📓', 'Cahier 96 pages', 1),
+(92, 'P002', 'Stylo bic bleu x5', 18, 'Bic', 2.50, 2.50, 'pack', 100, 100, 40, 'images/produits/stylos-bic.jpg', NULL, '🖊️', 'Stylos bic bleus', 1),
+(93, 'P003', 'Feutres 12 couleurs', 18, 'Maped', 5.90, 5.90, 'pack', 25, 25, 10, 'images/produits/feutres.jpg', NULL, '🖍️', 'Feutres coloriage', 1),
+(94, 'P004', 'Carnet A5 ligné', 18, 'Clairefontaine', 3.80, 3.80, 'unité', 35, 35, 15, 'images/produits/carnet-a5.jpg', NULL, '📒', 'Carnet A5', 1),
+(95, 'P005', 'Colle bâton 40g', 18, 'UHU', 1.99, 1.99, 'unité', 40, 40, 16, 'images/produits/colle-baton.jpg', NULL, '🧴', 'Colle bâton', 1),
+(96, 'P006', 'Règle 30cm', 18, 'Maped', 0.80, 0.80, 'unité', 60, 60, 25, 'images/produits/regle-30cm.jpg', NULL, '📏', 'Règle 30 cm', 1),
+(97, 'P007', 'Gomme blanche', 18, 'Staedtler', 0.60, 0.60, 'unité', 80, 80, 32, 'images/produits/gomme.jpg', NULL, '🧼', 'Gomme blanche', 1),
+(98, 'P008', 'Ciseaux école', 18, 'Maped', 2.40, 2.40, 'unité', 30, 30, 12, 'images/produits/ciseaux-ecole.jpg', NULL, '✂️', 'Ciseaux scolaires', 1),
+(99, 'P009', 'Bloc notes A4', 18, 'Oxford', 1.50, 1.50, 'unité', 45, 45, 18, 'images/produits/bloc-notes.jpg', NULL, '🗒️', 'Bloc-notes A4', 1),
+(100, 'P010', 'Stylo gel noir x3', 18, 'Pilot', 3.20, 3.20, 'pack', 55, 55, 22, 'images/produits/stylo-gel.jpg', NULL, '🖋️', 'Stylos gel noirs', 1);
+
+
+-- ============================
+-- INSERT MOUVEMENTS (EXEMPLE)
+-- ============================
+INSERT INTO mouvements
+(id, produit_id, utilisateur_id, type_mouvement, type, quantite, stock_avant, stock_apres, motif, reference_doc, date_mouvement, commentaire)
 VALUES
-('TechCorp', 'contact@techcorp.com', '123-456-7890'),
-('GadgetHouse', 'info@gadgethouse.com', '987-654-3210'),
-('RetroFun', 'support@retrofun.com', '555-123-4567'),
-('ElectroWorld', 'sales@electroworld.com', '444-222-3333'),
-('PowerUp', 'info@powerup.com', '111-222-3333'),
-('ComputeHub', 'service@computehub.com', '222-333-4444'),
-('GizmoDepot', 'support@gizmodepot.com', '333-444-5555'),
-('DeviceCenter', 'contact@devicecenter.com', '555-666-7777'),
-('Techies', 'hello@techies.com', '666-777-8888'),
-('BestDevices', 'info@bestdevices.com', '777-888-9999');
-
--- Insert data into products table
-INSERT INTO products (name, description, price, stock, category, supplier_id, status, last_sale_date)
-VALUES
-('Gaming Laptop', 'High-performance gaming laptop', 1429.99, 50, 'Electronics', 1, 'Active', '2023-09-12 10:00:00'),
-('Smartphone Pro', 'Latest model smartphone', 989.99, 100, 'Electronics', 2, 'Active', '2023-09-14 11:20:00'),
-('Retro Console', 'Classic retro gaming console', 219.99, 75, 'Gaming', 3, 'Active', '2023-10-01 13:30:00'),
-('Wireless Earbuds', 'Noise-cancelling earbuds', 149.99, 200, 'Audio', 4, 'Active', '2023-10-10 16:45:00'),
-('Smartwatch', 'Feature-packed smartwatch', 249.99, 120, 'Wearables', 5, 'Active', '2023-10-12 14:55:00'),
-('Tablet Pro', 'High-resolution tablet', 499.99, 90, 'Electronics', 6, 'Active', '2023-09-20 09:10:00'),
-('4K TV', 'Ultra HD 4K television', 699.99, 30, 'Home Electronics', 7, 'Active', '2023-10-15 12:05:00'),
-('Gaming Keyboard', 'Mechanical gaming keyboard', 79.99, 150, 'Peripherals', 8, 'Active', '2023-09-25 17:30:00'),
-('Bluetooth Speaker', 'Portable Bluetooth speaker', 89.99, 180, 'Audio', 9, 'Active', '2023-10-05 18:00:00'),
-('Smart Home Hub', 'Smart home device controller', 129.99, 80, 'Home Automation', 10, 'Active', '2023-09-18 20:15:00');
-
--- Insert data into product_catalog table
-INSERT INTO product_catalog (product_id, featured, display_order)
-VALUES
-(1, TRUE, 1),
-(2, TRUE, 2),
-(3, TRUE, 3),
-(4, FALSE, 4),
-(5, FALSE, 5),
-(6, TRUE, 6),
-(7, FALSE, 7),
-(8, TRUE, 8),
-(9, FALSE, 9),
-(10, TRUE, 10);
-
--- Insert data into orders table
-INSERT INTO orders (customer_id, order_date, status, total_amount, delivery_address)
-VALUES
-(1, '2023-10-15 14:30:00', 'UNKNOWN', 1429.99, '123 Elm Street, Cityville'),
-(2, '2023-10-14 09:45:00', 'Delivered', 989.99, '456 Oak Avenue, Townsville'),
-(3, '2023-09-10 16:15:00', 'Shipped', 219.99, '789 Pine Road, Villageton'),
-(4, '2023-10-20 11:10:00', 'Pending', 149.99, '321 Maple Drive, Lakeview'),
-(5, '2023-10-11 13:25:00', 'Shipped', 249.99, '654 Cedar Avenue, Hometown'),
-(6, '2023-09-12 12:00:00', 'Delivered', 499.99, '987 Birch Blvd, Hilltown'),
-(7, '2023-08-22 09:55:00', 'Pending', 699.99, '456 Spruce Street, Valley City'),
-(8, '2023-07-10 10:45:00', 'Shipped', 79.99, '321 Aspen Way, Riverside'),
-(9, '2023-10-21 12:35:00', 'Pending', 89.99, '789 Willow Lane, Greenfield'),
-(10, '2023-09-10 15:15:00', 'Delivered', 129.99, '456 Fir Avenue, Beachtown');
-
--- Insert data into order_items table
-INSERT INTO order_items (order_id, product_id, quantity, price_at_time)
-VALUES
-(1, 1, 1, 1429.99),
-(2, 2, 1, 989.99),
-(3, 3, 1, 219.99),
-(4, 4, 1, 149.99),
-(5, 5, 1, 249.99),
-(6, 6, 1, 499.99),
-(7, 7, 1, 699.99),
-(8, 8, 1, 79.99),
-(9, 9, 1, 89.99),
-(10, 10, 1, 129.99);
-
--- Insert data into product_reviews table
-INSERT INTO product_reviews (product_id, customer_id, rating, comment)
-VALUES
-(1, 1, 5, 'Amazing product, highly recommended!'),
-(2, 2, 4, 'Good value for money.'),
-(3, 3, 5, 'Classic experience! Love it.'),
-(4, 4, 3, 'Decent sound, could be better.'),
-(5, 5, 4, 'Great features, battery life could be improved.'),
-(6, 6, 5, 'Perfect for entertainment.'),
-(7, 7, 4, 'Impressive clarity and colors.'),
-(8, 8, 3, 'Keys are a bit stiff, but overall good.'),
-(9, 9, 4, 'Great for outdoor use.'),
-(10, 10, 5, 'Works flawlessly with all my devices.');
-
--- Insert data into delivery_addresses table
-INSERT INTO delivery_addresses (customer_id, address, is_default)
-VALUES
-(1, '123 Elm Street, Cityville', TRUE),
-(2, '456 Oak Avenue, Townsville', TRUE),
-(3, '789 Pine Road, Villageton', FALSE),
-(4, '321 Maple Drive, Lakeview', TRUE),
-(5, '654 Cedar Avenue, Hometown', TRUE),
-(6, '987 Birch Blvd, Hilltown', FALSE),
-(7, '456 Spruce Street, Valley City', TRUE),
-(8, '321 Aspen Way, Riverside', TRUE),
-(9, '789 Willow Lane, Greenfield', TRUE),
-(10, '456 Fir Avenue, Beachtown', TRUE);
-
-INSERT INTO delivery_addresses (customer_id, address, is_default, date_added)
-VALUES
-(1, '123 Elm Street, Cityville', TRUE, '2024-10-01'),
-(1, '123 Elm Street, Cityville', FALSE, '2023-10-01');
-
--- Insert data into price_history table
-INSERT INTO price_history (product_id, price, change_date)
-VALUES
-(1, 1429.99, '2023-09-10 10:30:00'),
-(2, 989.99, '2023-08-20 09:45:00'),
-(3, 219.99, '2023-09-01 14:00:00'),
-(4, 149.99, '2023-10-01 11:30:00'),
-(5, 249.99, '2023-09-25 15:10:00'),
-(6, 499.99, '2023-09-20 16:45:00'),
-(7, 699.99, '2023-08-10 12:10:00'),
-(8, 79.99, '2023-09-05 13:35:00'),
-(9, 89.99, '2023-09-30 14:20:00'),
-(10, 129.99, '2023-10-15 15:55:00');
-
--- Insert data into wishlist_items table
-INSERT INTO wishlist_items (customer_id, product_id)
-VALUES
-(1, 1),
-(2, 2),
-(3, 3),
-(4, 4),
-(5, 5),
-(6, 6),
-(7, 7),
-(8, 8),
-(9, 9),
-(10, 10);
-
--- Insert data into cart_items table
-INSERT INTO cart_items (customer_id, product_id, quantity)
-VALUES
-(1, 2, 1),
-(2, 1, 1),
-(3, 5, 2),
-(4, 3, 1),
-(5, 4, 2),
-(6, 6, 1),
-(7, 8, 1),
-(8, 9, 2),
-(9, 7, 1),
-(10, 10, 1);
-
--- Insert data into invoices table
-INSERT INTO invoices (order_id, customer_email, amount)
-VALUES
-(1, 'john.doe@example.com', 1429.99),
-(2, 'jane.smith@example.com', 989.99),
-(3, 'mike.jones@example.com', 219.99),
-(4, 'lisa.brown@example.com', 149.99),
-(5, 'paul.green@example.com', 249.99),
-(6, 'amy.white@example.com', 499.99),
-(7, 'mark.davis@example.com', 699.99),
-(8, 'sara.wilson@example.com', 79.99),
-(9, 'tom.harris@example.com', 89.99),
-(10, 'linda.thomas@example.com', 129.99);
-
--- Insert data into support_tickets table
-INSERT INTO support_tickets (customer_id, customer_email, subject, status)
-VALUES
-(1, 'john.doe@example.com', 'Issue with Gaming Laptop', 'Open'),
-(2, 'jane.smith@example.com', 'Smartphone Pro not charging', 'Closed'),
-(3, 'mike.jones@example.com', 'Retro Console defect', 'Pending'),
-(4, 'lisa.brown@example.com', 'Missing accessory', 'Resolved'),
-(5, 'paul.green@example.com', 'Delivery delayed', 'Open'),
-(6, 'amy.white@example.com', 'Tablet Pro screen issue', 'Closed'),
-(7, 'mark.davis@example.com', 'Keyboard keys malfunctioning', 'Pending'),
-(8, 'sara.wilson@example.com', 'Bluetooth speaker sound issue', 'Open'),
-(9, 'tom.harris@example.com', 'Invoice discrepancy', 'Closed'),
-(10, 'linda.thomas@example.com', 'Warranty question', 'Open');
-
--- Insert data into audit_log table
-INSERT INTO audit_log (table_name, record_id, action, old_value, new_value, changed_by)
-VALUES
-('customers', 1, 'Update', '{"loyalty_level": "Silver"}', '{"loyalty_level": "Gold"}', 'admin'),
-('products', 2, 'Update', '{"stock": 100}', '{"stock": 90}', 'admin'),
-('orders', 3, 'Insert', NULL, '{"order_id": 3, "status": "Shipped"}', 'system'),
-('customers', 4, 'Delete', '{"active": "TRUE"}', '{"active": "FALSE"}', 'user'),
-('support_tickets', 5, 'Update', '{"status": "Open"}', '{"status": "Resolved"}', 'support'),
-('product_reviews', 6, 'Update', '{"rating": "4"}', '{"rating": "5"}', 'moderator'),
-('products', 7, 'Insert', NULL, '{"product_id": 7, "status": "Active"}', 'admin'),
-('invoices', 8, 'Update', '{"amount": "79.99"}', '{"amount": "89.99"}', 'accounting'),
-('cart_items', 9, 'Delete', '{"quantity": "1"}', '{"quantity": "0"}', 'system'),
-('wishlist_items', 10, 'Insert', NULL, '{"customer_id": 10, "product_id": 10}', 'user');
-
-
--- Insertion des produits avec stock=0
-INSERT INTO products (name, price, stock, category, supplier_id, status) VALUES 
-('Casque Gaming Pro X', 149.99, 0, 'Audio', 1, 'Active'),
-('Souris Optique 4000dpi', 49.99, 0, 'Peripherals', 2, 'Active'), 
-('Webcam HD Pro', 89.99, 0, 'Peripherals', 3, 'Active');
-
--- Ces produits ne sont pas dans order_items donc jamais commandés
-INSERT INTO products (name, price, stock, category, supplier_id, status) VALUES
-('Microphone Studio USB', 129.99, 5, 'Audio', 4, 'Active'),
-('Clavier Rétroéclairé', 79.99, 8, 'Peripherals', 5, 'Active');
-
--- Ces produits n'ont pas d'avis dans product_reviews
-INSERT INTO products (name, price, stock, category, supplier_id, status) VALUES
-('Tapis de Souris XXL', 29.99, 20, 'Peripherals', 6, 'Active'),
-('Hub USB Type-C', 39.99, 15, 'Peripherals', 7, 'Active');
-
-INSERT INTO delivery_addresses (address)
-VALUES ('789 Test Street, New City');
-
-
--- D'abord, ajoutons la colonne et quelques managers
-ALTER TABLE customers ADD COLUMN manager_id INT;
-
-UPDATE customers 
-SET manager_id = 2 
-WHERE customer_id IN (1, 3, 4);
-
-
---- adresse de livraison non utilisée
-INSERT INTO delivery_addresses (address)
-VALUES ('789 Test Street, New City');
-
--- REPONSES AUX QUESTIONS 
--- A1. Produits prix > 500
-SELECT name, price FROM products WHERE price > 500;
-
--- Résultat: Gaming Laptop (1429.99), Smartphone Pro (989.99), 4K TV (699.99).
-
--- A2. Clients Gold visités après 2023-10-01
-SELECT name, loyalty_level, last_visit 
-FROM customers 
-WHERE loyalty_level = 'Gold' AND last_visit > '2023-10-01';
-
--- Résultat: Jane Smith, Linda Thomas.
-
--- A3. Tickets support 'Open'
-SELECT ticket_id, subject, status FROM support_tickets WHERE status = 'Open';
-
--- Résultat: tickets 1,5,8,10
-
--- A4. Produits catégorie 'Electronics'
-SELECT name, price FROM products WHERE category = 'Electronics';
-
--- Résultat: Gaming Laptop, Smartphone Pro, Tablet Pro
-
--- A5. Clients sans visite depuis 2023-09-01
-SELECT name, last_visit 
-FROM customers 
-WHERE last_visit < '2023-09-01' OR last_visit IS NULL;
-
--- Résultat: Mike Jones, Paul Green, Amy White, Mark Davis, Linda X.
-
--- A6. Fournisseurs téléphone commence par '555'
-SELECT name, phone FROM suppliers WHERE phone LIKE '555%';
-
--- Résultat: RetroFun, DeviceCenter.
-
--- Section B: Jointures Simples
--- B1. Commandes avec nom client
-SELECT o.order_id, o.order_date, c.name 
-FROM orders o 
-INNER JOIN customers c ON o.customer_id = c.customer_id;
-
--- B2. Produits avec avis 5 étoiles
-SELECT p.name, p.price, r.rating, r.comment 
-FROM products p 
-INNER JOIN product_reviews r ON p.product_id = r.product_id 
-WHERE r.rating = 5;
-
--- Résultat: Gaming Laptop, Retro Console, Tablet Pro, Smart Home Hub.
-
--- B3. Clients avec adresse par défaut
-SELECT c.name, da.address 
-FROM customers c 
-INNER JOIN delivery_addresses da ON c.customer_id = da.customer_id 
-WHERE da.is_default = TRUE;
-
--- B4. Produits et fournisseurs
-SELECT p.name AS productname, s.name AS suppliername 
-FROM products p 
-INNER JOIN suppliers s ON p.supplier_id = s.supplier_id;
-
--- B5. Éléments de commandes détaillés
-SELECT o.order_id, p.name, oi.quantity, oi.price_at_time 
-FROM orders o 
-INNER JOIN order_items oi ON o.order_id = oi.order_id 
-INNER JOIN products p ON oi.product_id = p.product_id;
-
--- Section C: Produits Cartésiens (CROSS JOIN)
--- C1. Couples produits même catégorie
-SELECT p1.name AS product1, p2.name AS product2, p1.category 
-FROM products p1 
-CROSS JOIN products p2 
-WHERE p1.category = p2.category AND p1.product_id < p2.product_id;
-
--- C2. Clients Gold × Produits Electronics
-SELECT c.name AS client, p.name AS product 
-FROM customers c 
-CROSS JOIN products p 
-WHERE c.loyalty_level = 'Gold' AND p.category = 'Electronics';
-
--- C3. Fournisseurs × Catégories
-SELECT s.name AS suppliername, p.category 
-FROM suppliers s 
-CROSS JOIN products p;
-
--- Section D: UNION / UNION ALL
--- D1. Emails clients + fournisseurs
-SELECT email, 'Client' AS Type FROM customers WHERE email IS NOT NULL
-UNION
-SELECT email, 'Fournisseur' AS Type FROM suppliers WHERE email IS NOT NULL;
-
--- D2. Commandes + Factures > 500
-SELECT order_date AS Date, total_amount AS Montant, 'Commande' AS Type 
-FROM orders WHERE total_amount > 500
-UNION ALL
-SELECT date_created AS Date, amount AS Montant, 'Facture' AS Type 
-FROM invoices WHERE amount > 500;
-
--- D3. Produits rupture stock OU jamais commandés OU sans avis
-(SELECT name AS product, 'Rupture Stock' AS reason FROM products WHERE stock = 0)
-UNION ALL
-(SELECT name, 'Jamais Commandé' FROM products p WHERE NOT EXISTS (
-    SELECT 1 FROM order_items oi WHERE oi.product_id = p.product_id))
-UNION ALL
-(SELECT name, 'Sans Avis' FROM products p WHERE NOT EXISTS (
-    SELECT 1 FROM product_reviews pr WHERE pr.product_id = p.product_id));
-
--- Section E: LEFT/RIGHT JOIN
-
--- E1. Tous clients + adresses (NULL si absent)
-SELECT c.name, da.address 
-FROM customers c 
-LEFT JOIN delivery_addresses da ON c.customer_id = da.customer_id;
-
--- E2. Tous fournisseurs + produits
-SELECT s.name AS supplier, p.name AS product 
-FROM suppliers s 
-LEFT JOIN products p ON s.supplier_id = p.supplier_id;
-
--- E3. Tous produits + dernier avis
-SELECT p.name, r.review_date, r.comment 
-FROM products p 
-LEFT JOIN (
-    SELECT product_id, review_date, comment,
-    ROW_NUMBER() OVER (PARTITION BY product_id ORDER BY review_date DESC) as rn
-    FROM product_reviews
-) r ON p.product_id = r.product_id AND r.rn = 1;
-
--- Section F: Self-Join
--- F1. Clients + manager
-SELECT c1.name AS client, c2.name AS manager 
-FROM customers c1 
-LEFT JOIN customers c2 ON c1.manager_id = c2.customer_id;
-
--- F2. Produit + autre produit même catégorie prix supérieur
-SELECT p1.name AS product, p1.price, p2.name AS otherproduct, p2.price AS otherprice
-FROM products p1 
-JOIN products p2 ON p1.category = p2.category AND p1.price < p2.price 
-AND p1.product_id < p2.product_id;
-
--- F3. Clients Gold + autre Gold plus de commandes
-SELECT c1.name AS clientgold, c2.name AS otherclientgold,
-(SELECT COUNT(*) FROM orders WHERE customer_id = c1.customer_id) AS clientid,
-(SELECT COUNT(*) FROM orders WHERE customer_id = c2.customer_id) AS otherclientid
-FROM customers c1 JOIN customers c2 ON c1.loyalty_level = 'Gold' 
-AND c2.loyalty_level = 'Gold' AND c1.customer_id < c2.customer_id
-HAVING clientid < otherclientid;
-
--- Section G: UPDATE/DELETE
--- G1. Gold pour commandes >1000
-UPDATE customers 
-SET loyalty_level = 'Gold' 
-WHERE customer_id IN (
-    SELECT DISTINCT customer_id FROM orders WHERE total_amount > 1000
-);
-
--- G2. Supprimer produits jamais commandés/wishlist/panier
-DELETE p FROM products p 
-WHERE NOT EXISTS (SELECT 1 FROM order_items oi WHERE oi.product_id = p.product_id)
-AND NOT EXISTS (SELECT 1 FROM wishlist_items w WHERE w.product_id = p.product_id)
-AND NOT EXISTS (SELECT 1 FROM cart_items ci WHERE ci.product_id = p.product_id);
-
--- G3. Cancel commandes Pending >30j sans facture
-UPDATE orders 
-SET status = 'Cancelled' 
-WHERE status = 'Pending' 
-AND order_date < DATE_SUB(NOW(), INTERVAL 30 DAY)
-AND order_id NOT IN (SELECT order_id FROM invoices);
-
--- G4. Supprimer adresses non utilisées
-DELETE da FROM delivery_addresses da 
-WHERE da.address_id NOT IN (
-    SELECT DISTINCT SUBSTRING(delivery_address, 1, 200) FROM orders WHERE delivery_address IS NOT NULL
-);
-
--- Section H: Requêtes complexes
--- H1. Clients avec commande ET avis ET ticket
-SELECT DISTINCT c.name 
-FROM customers c 
-WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id)
-AND EXISTS (SELECT 1 FROM product_reviews pr WHERE pr.customer_id = c.customer_id)
-AND EXISTS (SELECT 1 FROM support_tickets st WHERE st.customer_id = c.customer_id);
+(1, 1, 1, 'entree', 'entree', 20, 18, 38, 'approvisionnement', 'BL-2026-001', '2026-02-01 09:30:00', 'Réapprovisionnement pommes Golden'),
+(2, 2, 1, 'entree', 'entree', 15, 25, 40, 'approvisionnement', 'BL-2026-002', '2026-02-01 10:00:00', 'Réception bananes'),
+(3, 12, 2, 'vente', 'sortie', 3, 8, 5, 'vente', 'TICKET-1001', '2026-02-01 11:15:00', 'Vente steak haché'),
+(4, 41, 2, 'vente', 'sortie', 4, 12, 8, 'vente', 'TICKET-1002', '2026-02-01 12:10:00', 'Vente yaourts'),
+(5, 61, 3, 'entree', 'entree', 10, 8, 18, 'approvisionnement', 'BL-2026-003', '2026-02-02 08:45:00', 'Arrivage savon liquide'),
+(6, 72, 3, 'entree', 'entree', 12, 12, 24, 'approvisionnement', 'BL-2026-004', '2026-02-02 09:00:00', 'Réception lessive'),
+(7, 83, 1, 'perte', 'sortie', 2, 15, 13, 'perte_peremption', 'REG-2026-001', '2026-02-02 17:45:00', 'Lingettes abîmées'),
+(8, 90, 1, 'vente', 'sortie', 1, 16, 15, 'vente', 'TICKET-1003', '2026-02-03 14:20:00', 'Vente doudou ours'),
+(9, 31, 2, 'entree', 'entree', 6, 8, 14, 'approvisionnement', 'BL-2026-005', '2026-02-04 07:50:00', 'Approvisionnement poissonnerie'),
+(10, 95, 3, 'casse', 'sortie', 5, 40, 35, 'casse', 'REG-2026-002', '2026-02-04 16:05:00', 'Colles bâton endommagées');
