@@ -1,0 +1,112 @@
+<?php
+require '../config.php';
+
+$message = '';
+
+// Récupérer les catégories pour le <select>
+$sqlCat = "SELECT id, nom FROM categories ORDER BY nom";
+$stmtCat = $pdo->query($sqlCat);
+$categories = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
+
+// Traitement du formulaire
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $reference = trim($_POST['reference'] ?? '');
+    $nom = trim($_POST['nom'] ?? '');
+    $categorie_id = $_POST['categorie_id'] ?? null;
+    $quantite = (int)($_POST['quantite'] ?? 0);
+    $seuil_alerte = (int)($_POST['seuil_alerte'] ?? 0);
+    $prix = (float)($_POST['prix'] ?? 0);
+
+    if ($reference && $nom && $categorie_id) {
+        $sql = "INSERT INTO produits (reference, nom, categorie_id, quantite, seuil_alerte, prix)
+                VALUES (:reference, :nom, :categorie_id, :quantite, :seuil_alerte, :prix)";
+        $stmt = $pdo->prepare($sql);
+
+        try {
+            $stmt->execute([
+                ':reference' => $reference,
+                ':nom' => $nom,
+                ':categorie_id' => $categorie_id,
+                ':quantite' => $quantite,
+                ':seuil_alerte' => $seuil_alerte,
+                ':prix' => $prix
+            ]);
+            $message = "Produit ajouté avec succès.";
+        } catch (PDOException $e) {
+            $message = "Erreur lors de l'ajout du produit (référence peut-être déjà utilisée).";
+        }
+    } else {
+        $message = "Merci de remplir au moins Référence, Nom et Catégorie.";
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Ajouter un Produit - StockSmart</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>StockSmart</h1>
+</header>
+
+<nav>
+  <a href="../index.php">Accueil</a>
+  <a href="produits.php">Produits</a>
+  <a href="categories.php">Catégories</a>
+  <a href="mouvements.php">Mouvements</a>
+  <a href="login.php">Connexion</a>
+</nav>
+
+<div class="container">
+  <h2>Ajouter un produit</h2>
+
+  <?php if (!empty($message)) : ?>
+    <p class="<?php echo str_starts_with($message, 'Erreur') ? 'msg-error' : 'msg-success'; ?>">
+      <?php echo htmlspecialchars($message); ?>
+    </p>
+  <?php endif; ?>
+
+  <div class="form-wrap">
+    <form method="post" action="produit-add.php">
+      <label for="reference">Référence :</label>
+      <input id="reference" name="reference" type="text" placeholder="Ex : P001" required>
+
+      <label for="nom">Nom du produit :</label>
+      <input id="nom" name="nom" type="text" placeholder="Nom du produit" required>
+
+      <label for="categorie_id">Catégorie :</label>
+      <select id="categorie_id" name="categorie_id" required>
+        <option value="">Sélectionner une catégorie</option>
+        <?php foreach ($categories as $cat) : ?>
+          <option value="<?php echo $cat['id']; ?>">
+            <?php echo htmlspecialchars($cat['nom']); ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+
+      <label for="quantite">Quantité :</label>
+      <input id="quantite" name="quantite" type="number" min="0" value="0" required>
+
+      <label for="seuil_alerte">Seuil d'alerte :</label>
+      <input id="seuil_alerte" name="seuil_alerte" type="number" min="0" value="0">
+
+      <label for="prix">Prix (€) :</label>
+      <input id="prix" name="prix" type="number" step="0.01" min="0" value="0.00">
+
+      <button type="submit" class="btn">Enregistrer</button>
+      <a href="produits.php" class="btn btn-secondary">Annuler</a>
+    </form>
+  </div>
+</div>
+
+<footer>
+  © 2026 StockSmart - Projet TD Web
+</footer>
+
+<script src="../JavaScript/scrip.js"></script>
+</body>
+</html>
