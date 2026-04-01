@@ -1,0 +1,2 @@
+# Projetweb-StockSmart
+Créer une application web destinée au grande enseigne comme Auchan, Leclerc Carrefour; permettant d’enregistrer et d’organiser les produits par catégories. L’application affiche en temps réel les quantités disponibles en stock. Elle facilite la gestion des entrées lors des approvisionnements ainsi que des sorties liées aux ventes, pertes ou casses.
