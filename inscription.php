@@ -17,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $erreurs['email'] = "Email invalide";
     if (strlen($password) < 6) $erreurs['password'] = "Mot de passe (6 caractères min)";
     
-    // Vérifie si email existe déjà
     if (empty($erreurs)) {
         $stmt = $pdo->prepare("SELECT id FROM utilisateurs WHERE email = ?");
         $stmt->execute([$email]);
@@ -26,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // CRÉE LE COMPTE (rôle employe par défaut)
     if (empty($erreurs)) {
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $pdo->prepare("INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role) VALUES (?, ?, ?, ?, 'employe')");
@@ -36,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_nom'] = "$nom $prenom";
         $_SESSION['user_role'] = 'employe';
         
-        header('Location: ../index.php');
+        header('Location: ../index.php');  // ✅ Retour au tableau de bord
         exit();
     } else {
         $champs = ['nom' => $nom, 'prenom' => $prenom, 'email' => $email];
@@ -45,41 +43,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription StockSmart</title>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-    <h2>Créer un compte</h2>
-    
-    <form method="POST">
-        <div>
-            <label>Nom *</label>
-            <input type="text" name="nom" value="<?= htmlspecialchars($champs['nom']) ?>" required>
-            <?php if (isset($erreurs['nom'])): ?><span style="color:red"><?= $erreurs['nom'] ?></span><?php endif; ?>
-        </div>
+    <div class="login-container">
+        <h2>Créer un compte</h2>
         
-        <div>
-            <label>Prénom *</label>
-            <input type="text" name="prenom" value="<?= htmlspecialchars($champs['prenom']) ?>" required>
-            <?php if (isset($erreurs['prenom'])): ?><span style="color:red"><?= $erreurs['prenom'] ?></span><?php endif; ?>
-        </div>
+        <?php if ($erreurs): ?>
+            <div class="alert-error">
+                <?php foreach ($erreurs as $err): ?>
+                    <p><?= htmlspecialchars($err) ?></p>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
         
-        <div>
-            <label>Email *</label>
-            <input type="email" name="email" value="<?= htmlspecialchars($champs['email']) ?>" required>
-            <?php if (isset($erreurs['email'])): ?><span style="color:red"><?= $erreurs['email'] ?></span><?php endif; ?>
-        </div>
+        <form method="POST">
+            <div>
+                <label>Nom *</label>
+                <input type="text" name="nom" value="<?= htmlspecialchars($champs['nom']) ?>" required>
+            </div>
+            
+            <div>
+                <label>Prénom *</label>
+                <input type="text" name="prenom" value="<?= htmlspecialchars($champs['prenom']) ?>" required>
+            </div>
+            
+            <div>
+                <label>Email *</label>
+                <input type="email" name="email" value="<?= htmlspecialchars($champs['email']) ?>" required>
+            </div>
+            
+            <div>
+                <label>Mot de passe *</label>
+                <input type="password" name="password" required minlength="6">
+            </div>
+            
+            <button type="submit">Créer mon compte</button>
+        </form>
         
-        <div>
-            <label>Mot de passe *</label>
-            <input type="password" name="password" required>
-            <?php if (isset($erreurs['password'])): ?><span style="color:red"><?= $erreurs['password'] ?></span><?php endif; ?>
-        </div>
-        
-        <button type="submit">Créer mon compte</button>
-    </form>
-    
-    <p>Déjà un compte ? <a href="login.php">Se connecter</a></p>
+        <p>Déjà un compte ? <a href="login.php">Se connecter</a></p>
+    </div>
 </body>
 </html>
+
+
