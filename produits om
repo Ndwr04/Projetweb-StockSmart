@@ -1,0 +1,227 @@
+<?php
+require_once '../config.php';
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+$success = null;
+$error = null;
+
+$uploadDir = '../images/produits/';
+$uploadDbPath = 'images/produits/';
+$allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0777, true);
+}
+
+function uploadImageProduit($file, $uploadDir, $uploadDbPath, $allowedExtensions) {
+    if (!isset($file) || $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return [true, null];
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return [false, "Erreur lors de l'envoi de l'image."];
+    }
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($extension, $allowedExtensions, true)) {
+        return [false, "Format image invalide."];
+    }
+    if ($file['size'] > 2 * 1024 * 1024) {
+        return [false, "Image trop lourde (max 2 Mo)."];
+    }
+    $safeName = uniqid('prod_', true) . '.' . $extension;
+    $destination = $uploadDir . $safeName;
+    if (!move_uploaded_file($file['tmp_name'], $destination)) {
+        return [false, "Impossible d'enregistrer l'image."];
+    }
+    return [true, $uploadDbPath . $safeName];
+}
+
+// AJOUT PRODUIT
+if (isset($_POST['ajouter'])) {
+    $ref = trim($_POST['reference']);
+    $nom = trim($_POST['nom']);
+    $marque = trim($_POST['marque'] ?? 'Générique'); // ✅ NOUVEAU
+    $cat = (int)($_POST['categorie_id'] ?? 0);
+    $qte = (int)($_POST['quantite'] ?? 0);
+    $seuil = (int)($_POST['seuil_alerte'] ?? 0);
+    $prix = (float)($_POST['prix'] ?? 0);
+
+    [$okUpload, $imagePathOrError] = uploadImageProduit($_FILES['image'] ?? null, $uploadDir, $uploadDbPath, $allowedExtensions);
+
+    if (!$okUpload) {
+        $error = $imagePathOrError;
+    } else {
+        $image = $imagePathOrError ?: 'images/produits/no-image.jpg';
+        // ✅ SQL mis à jour avec la colonne marque
+        $sql = "INSERT INTO produits (reference, nom, marque, categorie_id, quantite, seuil_alerte, prix, image)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$ref, $nom, $marque, $cat, $qte, $seuil, $prix, $image]);
+        $success = "Produit ajouté !";
+    }
+}
+
+// ÉDITION
+if (isset($_POST['modifier'])) {
+    $id = (int)$_POST['id'];
+    $ref = trim($_POST['reference']);
+    $nom = trim($_POST['nom']);
+    $marque = trim($_POST['marque'] ?? 'Générique'); // ✅ NOUVEAU
+    $cat = (int)($_POST['categorie_id'] ?? 0);
+    $qte = (int)($_POST['quantite'] ?? 0);
+    $seuil = (int)($_POST['seuil_alerte'] ?? 0);
+    $prix = (float)($_POST['prix'] ?? 0);
+    $ancienneImage = $_POST['ancienne_image'] ?? 'images/produits/no-image.jpg';
+
+    $nouvelleImage = $ancienneImage;
+    if (isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+        [$okUpload, $imagePathOrError] = uploadImageProduit($_FILES['image'], $uploadDir, $uploadDbPath, $allowedExtensions);
+        if ($okUpload) {
+            $nouvelleImage = $imagePathOrError;
+            if ($ancienneImage !== 'images/produits/no-image.jpg' && file_exists('../'.$ancienneImage)) {
+                @unlink('../'.$ancienneImage);
+            }
+        } else { $error = $imagePathOrError; }
+    }
+
+    if (!$error) {
+        // ✅ SQL mis à jour avec la colonne marque
+        $sql = "UPDATE produits SET reference=?, nom=?, marque=?, categorie_id=?, quantite=?, seuil_alerte=?, prix=?, image=? WHERE id=?";
+        $pdo->prepare($sql)->execute([$ref, $nom, $marque, $cat, $qte, $seuil, $prix, $nouvelleImage, $id]);
+        $success = "Produit modifié !";
+    }
+}
+
+// SUPPRESSION
+if (isset($_GET['supprimer'])) {
+    $id = (int)$_GET['supprimer'];
+    $stmt = $pdo->prepare("SELECT image FROM produits WHERE id = ?");
+    $stmt->execute([$id]);
+    $p = $stmt->fetch();
+    if ($p) {
+        $pdo->prepare("DELETE FROM produits WHERE id = ?")->execute([$id]);
+        if ($p['image'] !== 'images/produits/no-image.jpg' && file_exists('../'.$p['image'])) {
+            @unlink('../'.$p['image']);
+        }
+        $success = "Produit supprimé !";
+    }
+}
+
+$produits = $pdo->query("SELECT p.*, c.nom as categorie_nom FROM produits p LEFT JOIN categories c ON p.categorie_id = c.id ORDER BY p.nom")->fetchAll();
+$categories = $pdo->query("SELECT * FROM categories ORDER BY nom")->fetchAll();
+$edit_produit = null;
+if (isset($_GET['edit'])) {
+    $stmt = $pdo->prepare("SELECT * FROM produits WHERE id = ?");
+    $stmt->execute([(int)$_GET['edit']]);
+    $edit_produit = $stmt->fetch();
+}
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Produits - StockSmart</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .img-produit { width: 60px; height: 60px; object-fit: cover; border-radius: 5px; }
+        .badge-brand { background: #eee; color: #555; font-size: 0.8em; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<header><h1>StockSmart</h1></header>
+<nav>
+    <a href="../index.php">🏠 Accueil</a>
+    <a href="produits.php" style="background: rgba(255,255,255,0.2); border-radius: 5px;">📦 Produits</a>
+    <a href="categories.php">📂 Catégories</a>
+    <a href="mouvements.php">📈 Mouvements</a>
+    
+    <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): ?>
+        <a href="admin.php">⚙️ Admin</a>
+    <?php endif; ?>
+
+    <a href="login.php?logout=1" style="color: #ffcccc; margin-left: 20px;">🚪 Déconnexion (<?= $_SESSION['user_prenom'] ?? 'Utilisateur' ?> <?= $_SESSION['user_nom'] ?? '' ?>)</a>
+</nav>
+
+<div class="page-entity">
+    <h2>📦 Gestion des produits</h2>
+
+    <?php if ($success): ?><div class="msg-success"><?= $success ?></div><?php endif; ?>
+    <?php if ($error): ?><div class="msg-error"><?= $error ?></div><?php endif; ?>
+
+    <div class="section section-form">
+        <h3><?= $edit_produit ? '✏️ Modifier' : '➕ Ajouter' ?></h3>
+        <form method="POST" class="form-entity" enctype="multipart/form-data">
+            <?php if ($edit_produit): ?>
+                <input type="hidden" name="id" value="<?= $edit_produit['id'] ?>">
+                <input type="hidden" name="ancienne_image" value="<?= $edit_produit['image'] ?>">
+            <?php endif; ?>
+
+            <div class="form-group">
+                <label>Référence</label>
+                <input type="text" name="reference" value="<?= $edit_produit['reference'] ?? '' ?>" required>
+            </div>
+            <div class="form-group">
+                <label>Nom du produit</label>
+                <input type="text" name="nom" value="<?= $edit_produit['nom'] ?? '' ?>" required>
+            </div>
+            <div class="form-group"> <label>Marque / Enseigne</label>
+                <input type="text" name="marque" value="<?= $edit_produit['marque'] ?? '' ?>" placeholder="ex: Saint-Michel, Carrefour, Danone">
+            </div>
+            <div class="form-group">
+                <label>Catégorie</label>
+                <select name="categorie_id" required>
+                    <option value="">Choisir...</option>
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?= $cat['id'] ?>" <?= ($edit_produit && $edit_produit['categorie_id'] == $cat['id']) ? 'selected' : '' ?>>
+                            <?= $cat['nom'] ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group"><label>Quantité</label><input type="number" name="quantite" value="<?= $edit_produit['quantite'] ?? '0' ?>"></div>
+            <div class="form-group"><label>Seuil d'alerte</label><input type="number" name="seuil_alerte" value="<?= $edit_produit['seuil_alerte'] ?? '10' ?>"></div>
+            <div class="form-group"><label>Prix (€)</label><input type="number" name="prix" step="0.01" value="<?= $edit_produit['prix'] ?? '0' ?>"></div>
+            <div class="form-group">
+                <label>Image</label>
+                <input type="file" name="image">
+            </div>
+            <button type="submit" name="<?= $edit_produit ? 'modifier' : 'ajouter' ?>" class="btn">Valider</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <table>
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Nom & Marque</th>
+                    <th>Catégorie</th>
+                    <th>Stock</th>
+                    <th>Prix</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($produits as $p): ?>
+                <tr>
+                    <td><img class="img-produit" src="../<?= $p['image'] ?>"></td>
+                    <td>
+                        <strong><?= htmlspecialchars($p['nom']) ?></strong><br>
+                        <span class="badge-brand"><?= htmlspecialchars($p['marque'] ?? 'Générique') ?></span>
+                    </td>
+                    <td><?= $p['categorie_nom'] ?></td>
+                    <td><?= $p['quantite'] ?></td>
+                    <td><?= number_format($p['prix'], 2) ?> €</td>
+                    <td>
+                        <a href="?edit=<?= $p['id'] ?>">✏️</a>
+                        <a href="?supprimer=<?= $p['id'] ?>" onclick="return confirm('Supprimer ?')">🗑️</a>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
