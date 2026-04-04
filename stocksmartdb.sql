@@ -128,7 +128,7 @@ CREATE TABLE mouvements (
 ) ENGINE=InnoDB;
 
 -- ============================
--- TRIGGER STOCK AUTO
+-- TRIGGER STOCK AUTO (CORRIGÉ)
 -- ============================
 DELIMITER $$
 
@@ -137,52 +137,53 @@ AFTER INSERT ON mouvements
 FOR EACH ROW
 BEGIN
     IF NEW.type_mouvement = 'entree' THEN
-        UPDATE produits
-        SET stock = stock + NEW.quantite,
-            quantite = quantite + NEW.quantite
+        UPDATE produits 
+        SET stock = stock + NEW.quantite, 
+            quantite = quantite + NEW.quantite 
         WHERE id = NEW.produit_id;
     ELSE
-        UPDATE produits
-        SET stock = stock - NEW.quantite,
-            quantite = quantite - NEW.quantite
+        UPDATE produits 
+        SET stock = stock - NEW.quantite, 
+            quantite = quantite - NEW.quantite 
         WHERE id = NEW.produit_id;
     END IF;
 END$$
 
 DELIMITER ;
 
+
 -- ============================
 -- UTILISATEURS
 -- ============================
 INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, password, role, actif) VALUES
-('Pretty', 'Rokia', 'rose@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 1),
-('Dupont', 'Marie', 'marie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'gerant', 1),
-('Dupont', 'Julie', 'julie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'chef_rayon', 1),
-('Stock', 'Karim', 'karim@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'magasinier', 1),
-('Caisse', 'Sophie', 'sophie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'caissier', 1);
+('Pretty',  'Rokia',  'rose@test.com',   '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',      1),
+('Dupont',  'Marie',  'marie@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'gerant',     1),
+('Dupont',  'Julie',  'julie@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'chef_rayon', 1),
+('Stock',   'Karim',  'karim@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'magasinier', 1),
+('Caisse',  'Sophie', 'sophie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'caissier',   1);
 
 -- ============================
 -- CATEGORIES
 -- ============================
 INSERT INTO categories (id, nom, emoji, couleur, description) VALUES
-(1, 'Fruits et légumes', '🥦', '#10b981', 'Produits frais de fruits et légumes'),
-(2, 'Boucherie / volaille', '🥩', '#ef4444', 'Viandes rouges, blanches et volailles'),
-(3, 'Charcuterie / traiteur', '🍖', '#f59e0b', 'Produits de charcuterie et traiteur'),
-(4, 'Poissonnerie', '🐟', '#3b82f6', 'Poissons, crustacés et fruits de mer'),
-(5, 'Crèmerie / produits laitiers', '🥛', '#8b5cf6', 'Lait, yaourts, fromages et crèmes'),
-(6, 'Épicerie salée', '🧂', '#f97316', 'Pâtes, riz, conserves, sauces salées'),
-(7, 'Épicerie sucrée', '🍫', '#ec4899', 'Biscuits, confiseries, chocolat'),
-(8, 'Petit-déjeuner', '☕', '#a16207', 'Café, thé, céréales, boissons chaudes'),
-(9, 'Boissons', '🥤', '#0ea5e9', 'Eaux, sodas, jus et boissons diverses'),
-(10, 'Surgelés', '🧊', '#06b6d4', 'Produits congelés et surgelés'),
-(11, 'Hygiène / beauté', '🧴', '#d946ef', 'Soins, hygiène corporelle et beauté'),
-(12, 'Entretien maison', '🧹', '#64748b', 'Produits ménagers et entretien'),
-(13, 'Bébé', '👶', '#f472b6', 'Produits destinés aux bébés'),
-(14, 'Animalerie', '🐾', '#84cc16', 'Alimentation et soins pour animaux'),
-(15, 'Bazar / maison', '🏠', '#78716c', 'Articles divers pour la maison'),
-(16, 'Textile', '👕', '#6366f1', 'Vêtements et linge'),
-(17, 'Électroménager / multimédia', '📱', '#334155', 'Appareils électriques et multimédia'),
-(18, 'Papeterie / librairie', '📚', '#b45309', 'Fournitures scolaires et livres');
+(1,  'Fruits et légumes',             '🥦', '#10b981', 'Produits frais de fruits et légumes'),
+(2,  'Boucherie / volaille',         '🥩', '#ef4444', 'Viandes rouges, blanches et volailles'),
+(3,  'Charcuterie / traiteur',       '🍖', '#f59e0b', 'Produits de charcuterie et traiteur'),
+(4,  'Poissonnerie',                 '🐟', '#3b82f6', 'Poissons, crustacés et fruits de mer'),
+(5,  'Crèmerie / produits laitiers', '🥛', '#8b5cf6', 'Lait, yaourts, fromages et crèmes'),
+(6,  'Épicerie salée',               '🧂', '#f97316', 'Pâtes, riz, conserves, sauces salées'),
+(7,  'Épicerie sucrée',              '🍫', '#ec4899', 'Biscuits, confiseries, chocolat'),
+(8,  'Petit-déjeuner',               '☕', '#a16207', 'Café, thé, céréales, boissons chaudes'),
+(9,  'Boissons',                     '🥤', '#0ea5e9', 'Eaux, sodas, jus et boissons diverses'),
+(10, 'Surgelés',                     '🧊', '#06b6d4', 'Produits congelés et surgelés'),
+(11, 'Hygiène / beauté',             '🧴', '#d946ef', 'Soins, hygiène corporelle et beauté'),
+(12, 'Entretien maison',             '🧹', '#64748b', 'Produits ménagers et entretien'),
+(13, 'Bébé',                         '👶', '#f472b6', 'Produits destinés aux bébés'),
+(14, 'Animalerie',                   '🐾', '#84cc16', 'Alimentation et soins pour animaux'),
+(15, 'Bazar / maison',               '🏠', '#78716c', 'Articles divers pour la maison'),
+(16, 'Textile',                      '👕', '#6366f1', 'Vêtements et linge'),
+(17, 'Électroménager / multimédia',  '📱', '#334155', 'Appareils électriques et multimédia'),
+(18, 'Papeterie / librairie',        '📚', '#b45309', 'Fournitures scolaires et livres');
 
 -- ============================
 -- INSERT PRODUITS
@@ -304,7 +305,7 @@ VALUES
 -- ============================
 -- INSERT MOUVEMENTS (EXEMPLE)
 -- ============================
-INSERT INTO mouvements
+INSERT INTO mouvements 
 (id, produit_id, utilisateur_id, type_mouvement, type, quantite, stock_avant, stock_apres, motif, reference_doc, date_mouvement, commentaire)
 VALUES
 (1, 1, 1, 'entree', 'entree', 20, 18, 38, 'approvisionnement', 'BL-2026-001', '2026-02-01 09:30:00', 'Réapprovisionnement pommes Golden'),
@@ -317,3 +318,12 @@ VALUES
 (8, 90, 1, 'vente', 'sortie', 1, 16, 15, 'vente', 'TICKET-1003', '2026-02-03 14:20:00', 'Vente doudou ours'),
 (9, 31, 2, 'entree', 'entree', 6, 8, 14, 'approvisionnement', 'BL-2026-005', '2026-02-04 07:50:00', 'Approvisionnement poissonnerie'),
 (10, 95, 3, 'casse', 'sortie', 5, 40, 35, 'casse', 'REG-2026-002', '2026-02-04 16:05:00', 'Colles bâton endommagées');
+
+
+
+
+
+
+
+
+
