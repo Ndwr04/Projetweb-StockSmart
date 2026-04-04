@@ -1,0 +1,202 @@
+CREATE DATABASE IF NOT EXISTS stocksmart_v2
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_general_ci;
+
+USE stocksmart_v2;
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS mouvements;
+DROP TABLE IF EXISTS produits;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS utilisateurs;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================
+-- TABLE UTILISATEURS
+-- ============================
+CREATE TABLE utilisateurs (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    prenom VARCHAR(100) DEFAULT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    mot_de_passe VARCHAR(255) DEFAULT NULL,
+    password VARCHAR(255) DEFAULT NULL,
+    role ENUM('admin','gerant','chef_rayon','magasinier','caissier','employe','lecture','consultant') NOT NULL DEFAULT 'employe',
+    actif TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_role (role),
+    INDEX idx_actif (actif)
+) ENGINE=InnoDB;
+
+-- ============================
+-- TABLE CATEGORIES
+-- ============================
+CREATE TABLE categories (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL UNIQUE,
+    emoji VARCHAR(10) DEFAULT '📦',
+    couleur VARCHAR(7) DEFAULT '#3b82f6',
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ============================
+-- TABLE PRODUITS
+-- ============================
+CREATE TABLE produits (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    reference VARCHAR(50) NOT NULL UNIQUE,
+    nom VARCHAR(200) NOT NULL,
+    categorie_id INT UNSIGNED NOT NULL,
+    fournisseur VARCHAR(150) DEFAULT NULL,
+    prix DECIMAL(10,2) DEFAULT 0.00,
+    prix_unitaire DECIMAL(10,2) DEFAULT 0.00,
+    unite ENUM('unité','kg','L','pack','carton') DEFAULT 'unité',
+    quantite INT NOT NULL DEFAULT 0,
+    stock INT NOT NULL DEFAULT 0,
+    seuil_alerte INT NOT NULL DEFAULT 10,
+    image VARCHAR(255) NOT NULL DEFAULT 'images/produits/no-image.jpg',
+    image_url VARCHAR(255) DEFAULT NULL,
+    image_emoji VARCHAR(10) DEFAULT '📦',
+    description TEXT,
+    actif TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (categorie_id) REFERENCES categories(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    INDEX idx_categorie (categorie_id),
+    INDEX idx_stock (stock),
+    INDEX idx_quantite (quantite),
+    INDEX idx_seuil (seuil_alerte),
+    INDEX idx_actif (actif)
+) ENGINE=InnoDB;
+
+-- ============================
+-- TABLE MOUVEMENTS
+-- ============================
+CREATE TABLE mouvements (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    produit_id INT UNSIGNED NOT NULL,
+    utilisateur_id INT UNSIGNED DEFAULT NULL,
+    user_id INT UNSIGNED DEFAULT NULL,
+    type_mouvement ENUM('entree','vente','perte','casse','sortie') NOT NULL,
+    type ENUM('entree','sortie') DEFAULT NULL,
+    quantite INT NOT NULL,
+    stock_avant INT DEFAULT NULL,
+    stock_apres INT DEFAULT NULL,
+    motif ENUM('approvisionnement','vente','perte_peremption','casse','retour_fournisseur','inventaire_regularisation','transfert','perte') DEFAULT 'approvisionnement',
+    reference_doc VARCHAR(100) DEFAULT NULL,
+    date_mouvement DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    commentaire TEXT,
+    FOREIGN KEY (produit_id) REFERENCES produits(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES utilisateurs(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    INDEX idx_produit (produit_id),
+    INDEX idx_user (utilisateur_id),
+    INDEX idx_user2 (user_id),
+    INDEX idx_type (type_mouvement),
+    INDEX idx_date (date_mouvement)
+) ENGINE=InnoDB;
+
+-- ============================
+-- TRIGGER STOCK AUTO (CORRIGÉ)
+-- ============================
+DELIMITER $$
+
+CREATE TRIGGER after_mouvement_insert
+AFTER INSERT ON mouvements
+FOR EACH ROW
+BEGIN
+    IF NEW.type_mouvement = 'entree' THEN
+        UPDATE produits 
+        SET stock = stock + NEW.quantite, 
+            quantite = quantite + NEW.quantite 
+        WHERE id = NEW.produit_id;
+    ELSE
+        UPDATE produits 
+        SET stock = stock - NEW.quantite, 
+            quantite = quantite - NEW.quantite 
+        WHERE id = NEW.produit_id;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- ============================
+-- INSERTIONS DES DONNÉES
+-- ============================
+
+INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, password, role, actif) VALUES
+('Pretty',  'Rokia',  'rose@test.com',   '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',      1),
+('Dupont',  'Marie',  'marie@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'gerant',     1),
+('Dupont',  'Julie',  'julie@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'chef_rayon', 1),
+('Stock',   'Karim',  'karim@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'magasinier', 1),
+('Caisse',  'Sophie', 'sophie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'caissier',   1);
+
+INSERT INTO categories (id, nom, emoji, couleur, description) VALUES
+(1,  'Fruits et légumes',             '🥦', '#10b981', 'Produits frais de fruits et légumes'),
+(2,  'Boucherie / volaille',         '🥩', '#ef4444', 'Viandes rouges, blanches et volailles'),
+(3,  'Charcuterie / traiteur',       '🍖', '#f59e0b', 'Produits de charcuterie et traiteur'),
+(4,  'Poissonnerie',                 '🐟', '#3b82f6', 'Poissons, crustacés et fruits de mer'),
+(5,  'Crèmerie / produits laitiers', '🥛', '#8b5cf6', 'Lait, yaourts, fromages et crèmes'),
+(6,  'Épicerie salée',               '🧂', '#f97316', 'Pâtes, riz, conserves, sauces salées'),
+(7,  'Épicerie sucrée',              '🍫', '#ec4899', 'Biscuits, confiseries, chocolat'),
+(8,  'Petit-déjeuner',               '☕', '#a16207', 'Café, thé, céréales, boissons chaudes'),
+(9,  'Boissons',                     '🥤', '#0ea5e9', 'Eaux, sodas, jus et boissons diverses'),
+(10, 'Surgelés',                     '🧊', '#06b6d4', 'Produits congelés et surgelés'),
+(11, 'Hygiène / beauté',             '🧴', '#d946ef', 'Soins, hygiène corporelle et beauté'),
+(12, 'Entretien maison',             '🧹', '#64748b', 'Produits ménagers et entretien'),
+(13, 'Bébé',                         '👶', '#f472b6', 'Produits destinés aux bébés'),
+(14, 'Animalerie',                   '🐾', '#84cc16', 'Alimentation et soins pour animaux'),
+(15, 'Bazar / maison',               '🏠', '#78716c', 'Articles divers pour la maison'),
+(16, 'Textile',                      '👕', '#6366f1', 'Vêtements et linge'),
+(17, 'Électroménager / multimédia',  '📱', '#334155', 'Appareils électriques et multimédia'),
+(18, 'Papeterie / librairie',        '📚', '#b45309', 'Fournitures scolaires et livres');
+
+INSERT INTO produits (id, reference, nom, categorie_id, fournisseur, prix, prix_unitaire, unite, quantite, stock, seuil_alerte, image, image_url, image_emoji, description, actif) VALUES
+(1,  'F001', 'Pommes Golden 1kg',    1, 'Ferme Dupont',    2.99, 2.99, 'kg',    18, 18, 6,  'images/produits/pommes-golden.jpg',    NULL, '🍎', 'Pommes golden fraîches',      1),
+(2,  'F002', 'Bananes 1kg',          1, 'Banana Corp',     1.79, 1.79, 'kg',    25, 25, 8,  'images/produits/bananes.jpg',          NULL, '🍌', 'Bananes mûres',               1),
+(3,  'F003', 'Carottes 1kg',         1, 'Ferme Bio',       1.20, 1.20, 'kg',    30, 30, 10, 'images/produits/carottes.jpg',         NULL, '🥕', 'Carottes fraîches',           1),
+(4,  'F004', 'Salade verte',         1, 'Maraîcher Local', 1.50, 1.50, 'unité', 15, 15, 5,  'images/produits/salade.jpg',           NULL, '🥬', 'Salade verte fraîche',        1),
+(5,  'F005', 'Tomates 500g',         1, 'Maraîcher Local', 2.20, 2.20, 'kg',    12, 12, 4,  'images/produits/tomates.jpg',          NULL, '🍅', 'Tomates juteuses',            1),
+(6,  'F006', 'Pommes de terre 2kg',  1, 'Ferme Dupont',    2.49, 2.49, 'kg',    40, 40, 15, 'images/produits/pommes-terre.jpg',     NULL, '🥔', 'Pommes de terre sachet 2kg',  1),
+(7,  'F007', 'Courgettes 1kg',       1, 'Ferme Bio',       2.10, 2.10, 'kg',    8,  8,  3,  'images/produits/courgettes.jpg',       NULL, '🥒', 'Courgettes fraîches',         1),
+(8,  'F008', 'Oignons 1kg',          1, 'Ferme Dupont',    1.80, 1.80, 'kg',    22, 22, 7,  'images/produits/oignons.jpg',          NULL, '🧅', 'Oignons jaunes',              1),
+(9,  'F009', 'Ail 250g',             1, 'Ferme Bio',       1.90, 1.90, 'kg',    35, 35, 12, 'images/produits/ail.jpg',              NULL, '🧄', 'Ail frais',                   1),
+(10, 'F010', 'Citrons 1kg',          1, 'Agrumes Sud',     3.20, 3.20, 'kg',    14, 14, 5,  'images/produits/citrons.jpg',          NULL, '🍋', 'Citrons jaunes',              1),
+(11, 'V001', 'Escalopes poulet 1kg', 2, 'Boucherie Martin', 7.50,  7.50,  'kg',   10, 10, 4, 'images/produits/escalopes-poulet.jpg', NULL, '🍗', 'Escalopes de poulet fraîches', 1),
+(12, 'V002', 'Steak haché 20%',      2, 'Maison Bouvet',    6.90,  6.90,  'kg',   8,  8,  3, 'images/produits/steak-hache.jpg',      NULL, '🥩', 'Steak haché 20%',               1),
+(13, 'V003', 'Cuisses poulet',       2, 'Volaille Express', 5.80,  5.80,  'kg',   15, 15, 6, 'images/produits/cuisses-poulet.jpg',   NULL, '🍗', 'Cuisses de poulet',            1),
+(14, 'V004', 'Côtelettes porc',      2, 'Boucherie Martin', 8.20,  8.20,  'kg',   12, 12, 5, 'images/produits/cottelettes-porc.jpg', NULL, '🥓', 'Côtelettes de porc',           1),
+(15, 'V005', 'Merguez 500g',         2, 'Maison Bouvet',    4.50,  4.50,  'pack', 20, 20, 8, 'images/produits/merguez.jpg',          NULL, '🌭', 'Merguez 500g',                  1),
+(16, 'V006', 'Aiguillettes poulet',  2, 'Volaille Express', 7.90,  7.90,  'kg',   6,  6,  2, 'images/produits/aiguillettes.jpg',     NULL, '🍗', 'Aiguillettes de poulet',       1),
+(17, 'V007', 'Filet mignon porc',    2, 'Boucherie Martin', 12.50, 12.50, 'kg',   5,  5,  2, 'images/produits/filet-mignon.jpg',     NULL, '🥩', 'Filet mignon de porc',          1),
+(18, 'V008', 'Surlonge boeuf',       2, 'Maison Bouvet',    15.90, 15.90, 'kg',   4,  4,  2, 'images/produits/surlonge-boeuf.jpg',   NULL, '🥩', 'Surlonge de boeuf',            1),
+(19, 'V009', 'Foie poulet 500g',     2, 'Volaille Express', 3.80,  3.80,  'pack', 18, 18, 7, 'images/produits/foie-poulet.jpg',      NULL, '🍗', 'Foie de poulet',                1),
+(20, 'V010', 'Haut de cuisse dinde', 2, 'Boucherie Martin', 9.20,  9.20,  'kg',   9,  9,  4, 'images/produits/cuisse-dinde.jpg',     NULL, '🍗', 'Haut de cuisse de dinde',       1),
+(31, 'P001', 'Filets cabillaud 400g', 4, 'Poisson Frais SA',  9.90, 9.90, 'pack',  8,  8,  3,  'images/produits/cabillaud.jpg',     NULL, '🐟', 'Filets de cabillaud',    1),
+(41, 'L001', 'Yaourt nature 4x125g',   5, 'Danone',               0.90, 0.90, 'pack',  12, 12, 4,  'images/produits/yaourt-nature.jpg',  NULL, '🥛', 'Yaourts nature',         1),
+(51, 'B001', 'Jus orange 1L',       9, 'Tropicana', 2.50, 2.50, 'unité', 5,  5,  5,  'images/produits/jus-orange.jpg',    NULL, '🍊', 'Jus orange',            1),
+(61, 'H001', 'Savon liquide 500ml',    11, 'Dove',    3.20, 3.20, 'unité', 8,  8,  3,  'images/produits/savon-liquide.jpg',     NULL, '🧼', 'Savon liquide main', 1),
+(71, 'E001', 'Liquide vaisselle 1L',     12, 'Paic',       2.49, 2.49, 'unité', 20, 20, 8,  'images/produits/liquide-vaisselle.jpg',  NULL, '🧽', 'Liquide vaisselle',       1),
+(81, 'BB001', 'Couches taille 2 x40', 13, 'Pampers',      12.90, 12.90, 'pack',  8,  8,  3,  'images/produits/couches-t2.jpg',   NULL, '👶', 'Couches bebe taille 2', 1),
+(91, 'PA001', 'Cahier 96p',           18, 'Oxford',        1.20, 1.20, 'unité', 50,  50,  20, 'images/produits/cahier-96p.jpg',  NULL, '📓', 'Cahier 96 pages',     1);
+
+-- ============================
+-- MOUVEMENTS EXEMPLES (CORRIGÉS)
+-- ============================
+INSERT INTO mouvements (id, produit_id, utilisateur_id, type_mouvement, type, quantite, stock_avant, stock_apres, motif, reference_doc, date_mouvement, commentaire) VALUES
+(1,  1,  1, 'entree', 'entree', 20, 18, 38, 'approvisionnement', 'BL-2026-001',  '2026-02-01 09:30:00', 'Réapprovisionnement pommes Golden'),
+(2,  2,  1, 'entree', 'entree', 15, 25, 40, 'approvisionnement', 'BL-2026-002',  '2026-02-01 10:00:00', 'Réception bananes'),
+(3,  12, 2, 'vente',  'sortie', 3,  8,  5,  'vente',             'TICKET-1001',  '2026-02-01 11:15:00', 'Vente steak haché'),
+(4,  41, 2, 'vente',  'sortie', 4,  12, 8,  'vente',             'TICKET-1002',  '2026-02-01 12:10:00', 'Vente yaourts'),
+(5,  61, 3, 'entree', 'entree', 10, 8,  18, 'approvisionnement', 'BL-2026-003',  '2026-02-02 08:45:00', 'Arrivage savon liquide'),
+-- Le produit 71 existe (Liquide vaisselle), le 72 n'existait pas :
+(6,  71, 3, 'entree', 'entree', 12, 12, 24, 'approvisionnement', 'BL-2026-004',  '2026-02-02 09:00:00', 'Réception lessive'),
+(7,  81, 1, 'perte',  'sortie', 2,  15, 13, 'perte_peremption',  'REG-2026-001', '2026-02-02 17:45:00', 'Couches abimées'),
+(8,  91, 1, 'vente',  'sortie', 1,  16, 15, 'vente',             'TICKET-1003',  '2026-02-03 14:20:00', 'Vente cahier'),
+(9,  31, 2, 'entree', 'entree', 6,  8,  14, 'approvisionnement', 'BL-2026-005',  '2026-02-04 07:50:00', 'Approvisionnement poissonnerie'),
+(10, 91, 3, 'casse',  'sortie', 5,  40, 35, 'casse',             'REG-2026-002', '2026-02-04 16:05:00', 'Cahiers endommagés');
