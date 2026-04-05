@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS utilisateurs;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+
 -- ============================
 -- TABLE UTILISATEURS
 -- ============================
@@ -22,7 +23,6 @@ CREATE TABLE utilisateurs (
     prenom VARCHAR(100) DEFAULT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     mot_de_passe VARCHAR(255) DEFAULT NULL,
-    password VARCHAR(255) DEFAULT NULL,
     role ENUM(
         'admin',
         'gerant',
@@ -153,15 +153,14 @@ DELIMITER ;
 
 
 -- ============================
--- UTILISATEURS
+-- DONNÉES UTILISATEURS (MOTS DE PASSE : "password123")
 -- ============================
-INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, password, role, actif) VALUES
-('Pretty',  'Rokia',  'rose@test.com',   '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',      1),
-('Dupont',  'Marie',  'marie@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'gerant',     1),
-('Dupont',  'Julie',  'julie@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'chef_rayon', 1),
-('Stock',   'Karim',  'karim@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'magasinier', 1),
-('Caisse',  'Sophie', 'sophie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'caissier',   1);
-
+INSERT INTO utilisateurs (nom, prenom, email, mot_de_passe, role, actif) VALUES
+('Pretty',  'Rokia',  'rose@test.com',   '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',      1),
+('Dupont',  'Marie',  'marie@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'gerant',     1),
+('Dupont',  'Julie',  'julie@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'chef_rayon', 1),
+('Stock',   'Karim',  'karim@test.com',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'magasinier', 1),
+('Caisse',  'Sophie', 'sophie@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'caissier',   1);
 -- ============================
 -- CATEGORIES
 -- ============================
@@ -318,12 +317,4 @@ VALUES
 (8, 90, 1, 'vente', 'sortie', 1, 16, 15, 'vente', 'TICKET-1003', '2026-02-03 14:20:00', 'Vente doudou ours'),
 (9, 31, 2, 'entree', 'entree', 6, 8, 14, 'approvisionnement', 'BL-2026-005', '2026-02-04 07:50:00', 'Approvisionnement poissonnerie'),
 (10, 95, 3, 'casse', 'sortie', 5, 40, 35, 'casse', 'REG-2026-002', '2026-02-04 16:05:00', 'Colles bâton endommagées');
-
-
-
-
-
-
-
-
 
