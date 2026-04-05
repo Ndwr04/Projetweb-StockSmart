@@ -9,53 +9,42 @@
 
 | Fonctionnalité | Statut |
 |---|---|
-| Connexion / Déconnexion | ✅ |
-| Inscription employé (public) | ✅ |
-| Tableau de bord récapitulatif | ✅ |
-| Gestion des produits (CRUD) | ✅ |
-| 18 catégories grande distribution | ✅ |
-| Entrées / Sorties de stock | ✅ |
-| Seuil d'alerte configurable | ✅ |
-| Historique des mouvements | ✅ |
-| Alertes stock faible | ✅ |
-| Gestion des utilisateurs (admin) | ✅ |
-| 7 rôles avec permissions | ✅ |
-| Recherche & filtres | ✅ |
-| Export CSV | ✅ |
-| Upload image produit | ✅ |
+| Page d’accueil publique | ✅ |
+| Connexion / Déconnexion | ✅ || Inscription utilisateur | ✅ |
+| Tableau de bord récapitulatif | ✅ || Affichage du total produits / catégories | ✅ |
+| Suivi du stock faible et des ruptures | ✅ || Calcul de la valeur du stock | ✅ |
+| Historique des derniers mouvements | ✅ || Produits en alerte | ✅ |
+| Gestion des produits | ✅ || Gestion des catégories | ✅ || Gestion des mouvements | ✅ |
+| Panneau d’administration | ✅ || Gestion des utilisateurs (admin) | ✅ || Gestion multi-rôles | ✅ |
+| Sessions PHP sécurisées | ✅ |
 
 ---
 
 ## 🗂️ Structure du projet
 
-```
-stockmaster/
-├── index.html              # Application principale (dashboard)
-├── login.html              # Page de connexion
-├── register.html           # Page d'inscription
+```bash
+stocksmart/
+├── index.php                 # Page d’accueil publique
+├── dashboard.php             # Tableau de bord après connexion
+├── config.php                # Connexion PDO à la base de données
 │
 ├── css/
-│   └── style.css           # Design system complet
+│   └── style.css             # Feuille de style principale
 │
-├── js/
-│   └── app.js              # Logique front-end (navigation, rendu, CRUD)
+├── JavaScript/
+│   └── scrip.js              # Scripts front-end
 │
-├── config/
-│   └── database.php        # Connexion PDO MySQL
-│
-├── auth/
-│   ├── login.php           # API connexion
-│   ├── register.php        # API inscription
-│   └── logout.php          # Déconnexion
-│
-├── api/
-│   ├── produits.php        # CRUD produits (REST)
-│   ├── mouvements.php      # Entrées/Sorties stock
-│   ├── categories.php      # CRUD catégories
-│   └── utilisateurs.php   # Gestion utilisateurs (admin)
+├── pages/
+│   ├── login.php             # Connexion utilisateur
+│   ├── inscription.php       # Inscription utilisateur
+│   ├── logout.php            # Déconnexion
+│   ├── produits.php          # Gestion des produits
+│   ├── categories.php        # Gestion des catégories
+│   ├── mouvements.php        # Gestion des mouvements
+│   └── admin.php             # Panneau d’administration
 │
 └── database/
-    └── schema.sql          # Schéma MySQL complet + données initiales
+    └── stocksmart.sql        # Schéma MySQL + données initiales
 ```
 
 ---
@@ -63,34 +52,46 @@ stockmaster/
 ## ⚙️ Installation
 
 ### Prérequis
-- PHP ≥ 8.0
-- MySQL ≥ 8.0
-- Serveur web : Apache (XAMPP/WAMP) ou Nginx
+- PHP 8.x
+- MySQL / MariaDB
+- Apache (XAMPP conseillé)
 
 ### Étapes
 
-**1. Importer la base de données**
-```sql
-mysql -u root -p < database/schema.sql
-```
-
-**2. Configurer la connexion**
-
-Modifier `config/database.php` :
-```php
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'stockmaster');
-define('DB_USER', 'votre_user');
-define('DB_PASS', 'votre_password');
-```
-
-**3. Démarrer le serveur**
+**1. Copier le projet dans `htdocs`**
 ```bash
-# Avec PHP built-in (dev)
-php -S localhost:8000
+C:\xampp\htdocs\stocksmart
+```
+**2. Importer la base de données**
+- Ouvrir phpMyAdmin
+- Créer la base `stocksmartdb`
+- Importer le fichier SQL du projet
+**3. Configurer la connexion**
 
-# Ou placer dans htdocs/ (XAMPP)
-# Puis ouvrir http://localhost/stockmaster/
+Modifier `config.php` :
+
+```php
+<?php
+$host = 'localhost';
+$dbname = 'stocksmartdb';
+$username = 'root';
+$password = '';
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Erreur de connexion : " . $e->getMessage());
+}
+?>
+```
+
+**4. Lancer le projet**
+- Démarrer Apache et MySQL dans XAMPP
+- Ouvrir dans le navigateur :
+
+```txt
+http://localhost/stocksmart/
 ```
 
 ---
@@ -99,55 +100,57 @@ php -S localhost:8000
 
 | Email | Mot de passe | Rôle |
 |---|---|---|
-| rose@test.com | password | 👑 Administrateur |
-| marc@test.com | password | 📊 Gérant |
-| julie@test.com | password | 🏷️ Chef de rayon |
-| karim@test.com | password | 📦 Magasinier |
-| sophie@test.com | password | 🛒 Caissier |
+| rose@test.com | password | Admin |
+| marie@test.com | password | Gérant |
+| julie@test.com | password | Chef de rayon |
+| karim@test.com | password | Magasinier |
+| sophie@test.com | password | Caissier |
 
 ---
 
-## 👥 Rôles et permissions
+## 👥 Rôles disponibles
 
-| Rôle | Dashboard | Produits | Mouvements | Admin users |
-|---|---|---|---|---|
-| **admin** | ✅ | ✅ RW | ✅ RW | ✅ |
-| **gérant** | ✅ | ✅ RW | ✅ RW | Partiel |
-| **chef_rayon** | ✅ | ✅ RW | ✅ RW | ❌ |
-| **magasinier** | ✅ | ✅ RW | ✅ RW | ❌ |
-| **caissier** | ✅ | 👁️ R | Sorties seult. | ❌ |
-| **employé** | ✅ | 👁️ R | ❌ | ❌ |
-| **consultant** | ✅ | 👁️ R | 👁️ R | ❌ |
+| Rôle |
+|---|
+| admin || gerant || chef_rayon || magasinier |
+| caissier || employe || lecture |
+| consultant |
 
 ---
 
 ## 🏷️ Catégories disponibles
 
-Fruits & Légumes · Boucherie/Volaille · Charcuterie/Traiteur · Poissonnerie · Produits Laitiers · Épicerie Salée · Épicerie Sucrée · Petit-déjeuner · Boissons · Surgelés · Hygiène/Beauté · Entretien Maison · Bébé · Animalerie · Bazar/Maison · Textile · Électroménager/Multimédia · Papeterie/Librairie
+Fruits et légumes · Boucherie / volaille · Charcuterie / traiteur · Poissonnerie · Crèmerie / produits laitiers · Épicerie salée · Épicerie sucrée · Petit-déjeuner · Boissons · Surgelés · Hygiène / beauté · Entretien maison · Bébé · Animalerie · Bazar / maison · Textile · Électroménager / multimédia · Papeterie / librairie
 
 ---
 
 ## 🔒 Sécurité
 
-- Mots de passe hashés avec `password_hash()` (BCrypt)
-- Sessions PHP sécurisées
-- Requêtes préparées PDO (protection SQL injection)
-- Validation des entrées côté serveur
-- Vérification des rôles sur chaque endpoint API
-- Inscription publique limitée au rôle `employe`
-- Promotion de rôle réservée aux `admin`
+- Mots de passe hashés avec `password_hash()`
+- Vérification avec `password_verify()`
+- Sessions PHP
+- Requêtes préparées PDO
+- Protection des pages privées par session
+- Accès à `admin.php` réservé au rôle `admin`
 
 ---
 
 ## 🛠️ Technologies
 
-- **Front-end** : HTML5, CSS3, JavaScript ES6+
-- **Back-end** : PHP 8.x
-- **Base de données** : MySQL 8.x (PDO)
-- **Polices** : Syne (titres) + DM Sans (texte)
-- **Pas de framework** — code vanilla léger et maintenable
+- **Front-end** : HTML5, CSS3, JavaScript
+- **Back-end** : PHP
+- **Base de données** : MySQL / MariaDB
+- **Serveur local** : XAMPP
+- **Accès BD** : PDO
 
 ---
+
+## 📌 Remarques
+
+- La page d’accueil est publique.
+- Après connexion, l’utilisateur est redirigé vers `dashboard.php`.
+- Le panneau `admin.php` est accessible uniquement aux administrateurs.
+- La déconnexion se fait via `pages/logout.php`.
 
 ## 📌 Prochaines évolutions possibles
 
