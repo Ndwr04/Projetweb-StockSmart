@@ -1,189 +1,143 @@
 <?php
 session_start();
-require_once 'config.php';
 
-$user_nom = $_SESSION['user_nom'] ?? 'Invité';
-$user_role = $_SESSION['user_role'] ?? 'Utilisateur';
-
-function h($str) {
-    return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
+if (isset($_SESSION['user_id'])) {
+    header('Location: dashboard.php');
+    exit();
 }
-
-function isAdmin() {
-    return ($_SESSION['user_role'] ?? '') === 'admin';
-}
-
-// 1) Totaux produits / catégories
-$sqlTotalProd = "SELECT COUNT(*) FROM produits";
-$totalProduits = (int)$pdo->query($sqlTotalProd)->fetchColumn();
-
-$sqlTotalCat = "SELECT COUNT(*) FROM categories";
-$totalCategories = (int)$pdo->query($sqlTotalCat)->fetchColumn();
-
-// 2) Stock faible
-$sqlStockFaible = "SELECT COUNT(*) FROM produits WHERE quantite > 0 AND quantite <= seuil_alerte";
-$stockFaible = (int)$pdo->query($sqlStockFaible)->fetchColumn();
-
-// 3) Ruptures
-$sqlRuptures = "SELECT COUNT(*) FROM produits WHERE quantite = 0";
-$ruptures = (int)$pdo->query($sqlRuptures)->fetchColumn();
-
-// 4) Valeur totale du stock
-$valeurStock = (float)($pdo->query("SELECT COALESCE(SUM(prix * quantite), 0) FROM produits")->fetchColumn());
-
-// 5) Mouvements
-$sqlMvts = "SELECT m.date_mouvement, m.type_mouvement, m.quantite, p.nom AS produit_nom
-            FROM mouvements m
-            INNER JOIN produits p ON m.produit_id = p.id
-            ORDER BY m.date_mouvement DESC
-            LIMIT 8";
-$derniersMouvements = $pdo->query($sqlMvts)->fetchAll(PDO::FETCH_ASSOC);
-
-// 6) Produits en alerte
-$produitsAlerte = $pdo->query("
-    SELECT p.nom, p.quantite, p.seuil_alerte, c.nom AS categorie
-    FROM produits p
-    LEFT JOIN categories c ON p.categorie_id = c.id
-    WHERE p.quantite <= p.seuil_alerte
-    ORDER BY p.quantite ASC
-    LIMIT 5
-")->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockSmart — Tableau de bord</title>
+    <title>StockSmart — Accueil</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .home-hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            background:
+                linear-gradient(rgba(43,38,36,0.45), rgba(43,38,36,0.55)),
+                linear-gradient(135deg, #8a6f63 0%, #6f564d 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .home-box {
+            max-width: 900px;
+        }
+
+        .home-logo {
+            font-size: clamp(54px, 11vw, 120px);
+            font-weight: 900;
+            letter-spacing: 3px;
+            line-height: 0.95;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+        }
+
+        .home-logo span {
+            display: block;
+        }
+
+        .home-subtitle {
+            font-size: clamp(18px, 2.5vw, 28px);
+            color: rgba(255,255,255,0.92);
+            margin-bottom: 18px;
+            font-weight: 500;
+        }
+
+        .home-text {
+            max-width: 700px;
+            margin: 0 auto 34px;
+            font-size: 17px;
+            color: rgba(255,255,255,0.86);
+        }
+
+        .home-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-home {
+            min-width: 220px;
+            padding: 14px 22px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 800;
+            text-align: center;
+            text-decoration: none;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-3px);
+            text-decoration: none;
+        }
+
+        .btn-home-primary {
+            background: #fff;
+            color: var(--primary-dark);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+        }
+
+        .btn-home-primary:hover {
+            background: #f5f1ef;
+        }
+
+        .btn-home-secondary {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.35);
+            backdrop-filter: blur(6px);
+        }
+
+        .btn-home-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .home-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn-home {
+                width: 100%;
+                max-width: 320px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <main class="home-hero">
+        <div class="home-box">
+            <h1 class="home-logo">
+                <span>STOCK</span>
+                <span>SMART</span>
+            </h1>
 
-<header>
-    <h1>📦 StockSmart</h1>
-</header>
+            <p class="home-subtitle">La gestion de stock simple, claire et professionnelle</p>
 
-<nav>
-    <a href="index.php">🏠 Accueil</a>
-    <a href="pages/produits.php">📦 Produits</a>
-    <a href="pages/categories.php">📂 Catégories</a>
-    <a href="pages/mouvements.php">📈 Mouvements</a>
-    <?php if (isAdmin()): ?>
-        <a href="pages/admin.php">⚙️ Admin</a>
-    <?php endif; ?>
-    <a href="pages/logout.php">🚪 Déconnexion (<?= h($user_nom) ?>)</a>
-</nav>
+            <p class="home-text">
+                Suivez vos produits, vos catégories et vos mouvements en temps réel
+                dans une interface moderne pensée pour les employés comme pour les administrateurs.
+            </p>
 
-<div class="page-entity">
-
-    <h2>👋 Bonjour <?= h($user_nom) ?> <small style="font-size:14px;color:var(--muted);">(<?= h($user_role) ?>)</small></h2>
-
-    <!-- CARTES RÉSUMÉ -->
-    <div class="resume-grid">
-        <div class="resume-row">
-            <div class="card">
-                <h3>📦 Total Produits</h3>
-                <p><?= $totalProduits ?></p>
-            </div>
-            <div class="card">
-                <h3>📂 Catégories</h3>
-                <p><?= $totalCategories ?></p>
-            </div>
-            <div class="card">
-                <h3>💰 Valeur stock</h3>
-                <p style="font-size:20px;"><?= number_format($valeurStock, 2, ',', ' ') ?> €</p>
+            <div class="home-actions">
+                <a href="pages/login.php" class="btn-home btn-home-primary">Se connecter</a>
+                <a href="pages/inscription.php" class="btn-home btn-home-secondary">S’inscrire</a>
             </div>
         </div>
-        <div class="resume-row">
-            <div class="card">
-                <h3>⚠️ Stock faible</h3>
-                <p class="alert"><?= $stockFaible ?></p>
-            </div>
-            <div class="card">
-                <h3>🚨 Ruptures</h3>
-                <p class="alert"><?= $ruptures ?></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- PRODUITS EN ALERTE -->
-    <?php if ($stockFaible > 0 || $ruptures > 0): ?>
-    <div class="section">
-        <h3>🚨 Produits nécessitant attention</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Produit</th>
-                    <th>Catégorie</th>
-                    <th>Stock actuel</th>
-                    <th>Seuil alerte</th>
-                    <th>État</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($produitsAlerte as $p): ?>
-                <tr>
-                    <td><strong><?= h($p['nom']) ?></strong></td>
-                    <td><?= h($p['categorie'] ?? '-') ?></td>
-                    <td>
-                        <span class="badge <?= $p['quantite'] == 0 ? 'badge-danger' : 'badge-warn' ?>">
-                            <?= $p['quantite'] ?>
-                        </span>
-                    </td>
-                    <td><?= $p['seuil_alerte'] ?></td>
-                    <td>
-                        <span class="badge <?= $p['quantite'] == 0 ? 'badge-danger' : 'badge-warn' ?>">
-                            <?= $p['quantite'] == 0 ? '🚨 Rupture' : '⚠️ Faible' ?>
-                        </span>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-    <?php endif; ?>
-
-    <!-- DERNIERS MOUVEMENTS -->
-    <div class="section">
-        <h3>📋 Derniers mouvements</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Produit</th>
-                    <th>Type</th>
-                    <th>Quantité</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($derniersMouvements)): ?>
-                    <tr>
-                        <td colspan="4" style="color:var(--muted);padding:18px;">
-                            Aucun mouvement enregistré pour le moment.
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($derniersMouvements as $m): ?>
-                    <tr>
-                        <td><?= h($m['produit_nom']) ?></td>
-                        <td>
-                            <span class="badge <?= $m['type_mouvement'] === 'entree' ? 'badge-success' : 'badge-danger' ?>">
-                                <?= $m['type_mouvement'] === 'entree' ? '📥 Entrée' : '📤 ' . ucfirst(h($m['type_mouvement'])) ?>
-                            </span>
-                        </td>
-                        <td><?= (int)$m['quantite'] ?></td>
-                        <td><?= h($m['date_mouvement']) ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-
-</div>
-
-<footer>© 2026 StockSmart — Projet TD Web</footer>
-<script src="JavaScript/scrip.js"></script>
+    </main>
 </body>
 </html>
+
+
+
