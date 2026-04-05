@@ -7,7 +7,17 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') {
     exit();
 }
 
-// STATS GLOBALE
+// SUPPRESSION USER
+if (isset($_GET['supp_user'])) {
+    $id = (int) $_GET['supp_user'];
+
+    if ($_SESSION['user_id'] != $id) {
+        $pdo->prepare("DELETE FROM utilisateurs WHERE id = ?")->execute([$id]);
+        $success = "Utilisateur supprimé !";
+    }
+}
+
+// STATS GLOBALES
 $nb_users = $pdo->query("SELECT COUNT(*) FROM utilisateurs")->fetchColumn();
 $nb_produits = $pdo->query("SELECT COUNT(*) FROM produits")->fetchColumn();
 $nb_categories = $pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
@@ -15,21 +25,11 @@ $nb_mouvements = $pdo->query("SELECT COUNT(*) FROM mouvements")->fetchColumn();
 
 // UTILISATEURS
 $utilisateurs = $pdo->query("
-    SELECT id, nom, prenom, email, role, date_creation 
-    FROM utilisateurs 
-    ORDER BY role DESC, nom
-")->fetchAll();
-
-// SUPPRESSION USER
-if (isset($_GET['supp_user'])) {
-    $id = $_GET['supp_user'];
-    if ($_SESSION['user_id'] != $id) {
-        $pdo->prepare("DELETE FROM utilisateurs WHERE id = ?")->execute([$id]);
-        $success = "Utilisateur supprimé !";
-    }
-}
+    SELECT id, nom, prenom, email, role, created_at
+    FROM utilisateurs
+    ORDER BY role DESC, nom ASC
+")->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -42,24 +42,23 @@ if (isset($_GET['supp_user'])) {
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="../index.php">📦 StockSmart Admin</a>
+            <a class="navbar-brand" href="../dashboard.php">📦 StockSmart Admin</a>
             <div class="navbar-nav">
-                <a class="nav-link" href="../index.php">Dashboard</a>
+                <a class="nav-link" href="../dashboard.php">Dashboard</a>
                 <a class="nav-link" href="../pages/produits.php">Produits</a>
                 <a class="nav-link active" href="admin.php">Administration</a>
-                <a class="nav-link" href="../pages/login.php?logout=1">Déconnexion</a>
+                <a class="nav-link" href="../pages/logout.php">Déconnexion</a>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
-        <h1>⚙️ Panneau d'Administration</h1>
-        
+        <h1>⚙️ Panneau d'administration</h1>
+
         <?php if (isset($success)): ?>
-            <div class="alert alert-success"><?= $success ?></div>
+            <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
         <?php endif; ?>
 
-        <!-- 📊 STATS GLOBALE -->
         <div class="row mb-5">
             <div class="col-md-3">
                 <div class="card p-3 text-center bg-primary text-white">
@@ -87,14 +86,13 @@ if (isset($_GET['supp_user'])) {
             </div>
         </div>
 
-        <!-- 👥 GESTION UTILISATEURS -->
         <div class="card mb-5">
             <div class="card-header bg-danger text-white">
-                <h4>👥 Gestion des utilisateurs</h4>
+                <h4 class="mb-0">👥 Gestion des utilisateurs</h4>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover align-middle">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -106,27 +104,41 @@ if (isset($_GET['supp_user'])) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach($utilisateurs as $user): ?>
+                            <?php foreach ($utilisateurs as $user): ?>
                                 <tr>
-                                    <td><strong>#<?= $user['id'] ?></strong></td>
-                                    <td><?= htmlspecialchars($user['prenom'] . ' ' . $user['nom']) ?></td>
+                                    <td><strong>#<?= (int)$user['id'] ?></strong></td>
+                                    <td><?= htmlspecialchars(($user['prenom'] ?? '') . ' ' . ($user['nom'] ?? '')) ?></td>
                                     <td><?= htmlspecialchars($user['email']) ?></td>
                                     <td>
-                                        <?php 
-                                        if ($user['role'] == 'admin') $badge = 'danger';
-                                        elseif ($user['role'] == 'gerant') $badge = 'warning';
-                                        else $badge = 'success';
+                                        <?php
+                                        if ($user['role'] === 'admin') {
+                                            $badge = 'danger';
+                                        } elseif ($user['role'] === 'gerant') {
+                                            $badge = 'warning';
+                                        } elseif ($user['role'] === 'chef_rayon') {
+                                            $badge = 'primary';
+                                        } elseif ($user['role'] === 'magasinier') {
+                                            $badge = 'success';
+                                        } elseif ($user['role'] === 'caissier') {
+                                            $badge = 'info';
+                                        } else {
+                                            $badge = 'secondary';
+                                        }
                                         ?>
-                                        <span class="badge bg-<?= $badge ?>"><?= ucfirst($user['role']) ?></span>
+                                        <span class="badge bg-<?= $badge ?>"><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $user['role']))) ?></span>
                                     </td>
-                                    <td><?= date('d/m/Y', strtotime($user['date_creation'])) ?></td>
+                                    <td>
+                                        <?= !empty($user['created_at']) ? date('d/m/Y', strtotime($user['created_at'])) : '-' ?>
+                                    </td>
                                     <td>
                                         <?php if ($_SESSION['user_id'] != $user['id']): ?>
-                                            <a href="?supp_user=<?= $user['id'] ?>" 
-                                               class="btn btn-sm btn-outline-danger" 
-                                               onclick="return confirm('Supprimer <?= $user['prenom'] ?> ?')">
+                                            <a href="?supp_user=<?= (int)$user['id'] ?>"
+                                               class="btn btn-sm btn-outline-danger"
+                                               onclick="return confirm('Supprimer <?= htmlspecialchars($user['prenom']) ?> ?')">
                                                 🗑️
                                             </a>
+                                        <?php else: ?>
+                                            <span class="text-muted">Compte actuel</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -137,7 +149,6 @@ if (isset($_GET['supp_user'])) {
             </div>
         </div>
 
-        <!-- 🛠️ ACTIONS ADMIN -->
         <div class="row">
             <div class="col-md-4">
                 <div class="card text-center h-100">
@@ -169,7 +180,6 @@ if (isset($_GET['supp_user'])) {
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function confirmReset() {
             if (confirm('⚠️ Vider TOUTES les données ?')) {
@@ -179,3 +189,7 @@ if (isset($_GET['supp_user'])) {
     </script>
 </body>
 </html>
+
+
+
+
